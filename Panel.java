@@ -1,6 +1,6 @@
 
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
+import org.opencv.core.*;
+import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
@@ -8,6 +8,7 @@ import org.opencv.imgproc.Imgproc;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 public class Panel extends JPanel
 {
@@ -142,7 +143,7 @@ public class Panel extends JPanel
         mainPanel.add(camPanel);
         mainPanel.add(subtractPanel);
         frame.setVisible(true);
-        frame.setSize(1300, 500);
+        frame.setSize(800, 300);
         Mat currRGB = new Mat();
         Mat currGray = new Mat();
         Mat prevRGB = new Mat();
@@ -151,16 +152,31 @@ public class Panel extends JPanel
         Mat thresholdImg = new Mat();
         BufferedImage temp;
         VideoCapture capture = new VideoCapture(1);
+        Size blueSize = new Size(2.0, 2.0);
+
+        Mat contourImg = new Mat();
+        Mat hierachy = new Mat();
+        ArrayList<MatOfPoint> contours = new ArrayList<>();
+
+        Scalar red = new Scalar(0, 0, 255);
+        Scalar green = new Scalar(0, 255, 0);
+        Mat bkg = new Mat();
+        Rect bRect = new Rect();
+        MatOfPoint2f matOfPointForRectWithAngle;
+
         if (capture.isOpened()) {
             // set resulution
-            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 600);
-            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 400);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 360);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
             capture.read(prevRGB);
             Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
             Thread.sleep(500);
 
             while (true) {
+                contours.clear();
+
+
                 capture.read(currRGB);
                 temp = matToBufferedImage(currRGB);
                 camPanel.setimage(temp);
@@ -170,9 +186,54 @@ public class Panel extends JPanel
 
                 Core.absdiff(currGray, prevGray, diff);
                 Imgproc.threshold(diff, thresholdImg, 20, 255, Imgproc.THRESH_BINARY);
+                Imgproc.blur(thresholdImg, thresholdImg, blueSize);
 
+                /** find contours **/
+                Imgproc.findContours(thresholdImg, contours, hierachy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-                temp = matToBufferedImage(thresholdImg);
+                thresholdImg.copyTo(bkg);
+                Imgproc.cvtColor(bkg, bkg, Imgproc.COLOR_GRAY2RGB);
+//                Imgproc.drawContours(bkg, contours, -1, red);
+
+                /** bounding rectangle **/
+//                for (MatOfPoint contour : contours) {
+//                    bRect = Imgproc.boundingRect(contour);
+//                    Core.rectangle(bkg, new Point(bRect.x, bRect.y), new Point(bRect.x + bRect.width, bRect.y + bRect.height), red);
+//                }
+
+                /** bounding rectangle with angle - draw largest **/
+//                RotatedRect largestRect = null;
+//                for (MatOfPoint contour : contours) {
+//                    matOfPointForRectWithAngle = new MatOfPoint2f(contour.toArray());
+//                    RotatedRect rRect = Imgproc.minAreaRect(matOfPointForRectWithAngle);
+//                    if (largestRect == null)
+//                        largestRect = rRect;
+//                    else if (rRect.size.area() > largestRect.size.area())
+//                        largestRect = rRect;
+//                }
+//                // draw the largest rectangle
+//                if (largestRect != null) {
+//                    Point[] pts = new Point[4];
+//                    largestRect.points(pts);
+//                    for(int i = 0; i < 4; i++)
+//                        Core.line(bkg, pts[i], pts[(i + 1) % 4], green);
+//                    Core.circle(bkg, largestRect.center, 5, red, -1);
+//                }
+
+                /** bounding rectangle with angle - draw large ones **/
+                for (MatOfPoint contour : contours) {
+                    matOfPointForRectWithAngle = new MatOfPoint2f(contour.toArray());
+                    RotatedRect rRect = Imgproc.minAreaRect(matOfPointForRectWithAngle);
+                    if (rRect.size.area() > 200) {
+                        Point[] pts = new Point[4];
+                        rRect.points(pts);
+                        for(int i = 0; i < 4; i++)
+                            Core.line(bkg, pts[i], pts[(i + 1) % 4], green);
+                        Core.circle(bkg, rRect.center, 5, red, -1);
+                    }
+                }
+
+                temp = matToBufferedImage(bkg);
                 subtractPanel.setimage(temp);
                 subtractPanel.repaint();
 
