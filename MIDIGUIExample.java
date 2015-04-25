@@ -39,7 +39,7 @@ public class MIDIGUIExample
 
         button1.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mc[5].noteOn(60, 600);
+                mc[5].noteOn(60, 200);
                 System.out.println("ActionListener done");
             }
         });
