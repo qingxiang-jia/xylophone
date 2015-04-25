@@ -74,6 +74,59 @@ public class Panel extends JPanel
         g.drawImage(temp, 10, 10, temp.getWidth(), temp.getHeight(), this);
     }
 
+//    public static void main(String arg[]) throws Exception
+//    {
+//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+//        JFrame frame = new JFrame("BasicPanel");
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.setSize(400, 400);
+//        Panel mainPanel = new Panel();
+//        frame.setContentPane(mainPanel);
+//        GridLayout layout = new GridLayout(0, 2);
+//        mainPanel.setLayout(layout);
+//        Panel camPanel = new Panel();
+//        Panel subtractPanel = new Panel();
+//        mainPanel.add(camPanel);
+//        mainPanel.add(subtractPanel);
+//        frame.setVisible(true);
+//        frame.setSize(1300, 500);
+//        Mat currRGB = new Mat();
+//        Mat nextRGB = new Mat();
+//        Mat currGray = new Mat();
+//        Mat nextGray = new Mat();
+//        Mat diff = new Mat();
+//        Mat thresholdImg = new Mat();
+//        BufferedImage temp;
+//        VideoCapture capture = new VideoCapture(1);
+//        if (capture.isOpened()) {
+//            // set resulution
+//            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 600);
+//            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 400);
+//
+//            while (true) {
+//
+//                capture.read(currRGB);
+//                temp = matToBufferedImage(currRGB);
+//                camPanel.setimage(temp);
+//                camPanel.repaint();
+//
+//                Imgproc.cvtColor(currRGB, currGray, Imgproc.COLOR_RGB2GRAY);
+//
+//                capture.read(nextRGB);
+//
+//
+//                Imgproc.cvtColor(nextRGB, nextGray, Imgproc.COLOR_RGB2GRAY); // don't need to keep prevRGB
+//                Core.absdiff(currGray, nextGray, diff);
+//                Imgproc.threshold(diff, thresholdImg, 40, 255, Imgproc.THRESH_BINARY);
+//
+//                temp = matToBufferedImage(thresholdImg);
+//
+//                subtractPanel.setimage(temp);
+//                subtractPanel.repaint();
+//            }
+//        }
+//    }
+
     public static void main(String arg[]) throws Exception
     {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -89,47 +142,43 @@ public class Panel extends JPanel
         mainPanel.add(camPanel);
         mainPanel.add(subtractPanel);
         frame.setVisible(true);
-        Mat prevRGB = new Mat();
+        frame.setSize(1300, 500);
         Mat currRGB = new Mat();
-        Mat prevGray = new Mat();
         Mat currGray = new Mat();
+        Mat prevRGB = new Mat();
+        Mat prevGray = new Mat();
         Mat diff = new Mat();
         Mat thresholdImg = new Mat();
         BufferedImage temp;
         VideoCapture capture = new VideoCapture(1);
         if (capture.isOpened()) {
             // set resulution
-            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 300);
-            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 200);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 600);
+            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 400);
 
-            capture.read(currRGB); // so that curr and prev are identical in data structure
-            currRGB.copyTo(prevRGB);
+            capture.read(prevRGB);
+            Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
+            Thread.sleep(500);
 
             while (true) {
                 capture.read(currRGB);
-                if (!currRGB.empty()) {
-                    frame.setSize(currRGB.width() + 40, currRGB.height() + 60);
-                    temp = matToBufferedImage(currRGB);
-                    camPanel.setimage(temp);
-                    camPanel.repaint();
+                temp = matToBufferedImage(currRGB);
+                camPanel.setimage(temp);
+                camPanel.repaint();
 
-                    Imgproc.cvtColor(currRGB, currGray, Imgproc.COLOR_RGB2GRAY);
-                    Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY); // don't need to keep prevRGB
+                Imgproc.cvtColor(currRGB, currGray, Imgproc.COLOR_RGB2GRAY);
 
-                    Core.absdiff(currGray, prevGray, diff);
-//                    Imgproc.threshold(diff, thresholdImg, 2, 255, Imgproc.THRESH_BINARY);
+                Core.absdiff(currGray, prevGray, diff);
+                Imgproc.threshold(diff, thresholdImg, 20, 255, Imgproc.THRESH_BINARY);
 
-                    temp = matToBufferedImage(diff);
-                    subtractPanel.setimage(temp);
-                    subtractPanel.repaint();
-                    prevRGB = currRGB;
-                    Thread.sleep(1000);
-                } else {
-                    System.out.println(" --(!) No captured frame -- Break!");
-                    break;
-                }
+
+                temp = matToBufferedImage(thresholdImg);
+                subtractPanel.setimage(temp);
+                subtractPanel.repaint();
+
+                prevRGB = currRGB;
+                Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
             }
         }
-        return;
     }
 }
