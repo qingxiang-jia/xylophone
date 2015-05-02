@@ -10,13 +10,13 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-public class Panel extends JPanel
+public class PanelMotionBased extends JPanel
 {
     private static final long serialVersionUID = 1L;
     private BufferedImage image;
 
     // Create a constructor method
-    public Panel()
+    public PanelMotionBased()
     {
         super();
     }
@@ -82,14 +82,14 @@ public class Panel extends JPanel
         JFrame frame = new JFrame("BasicPanel");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 400);
-        Panel mainPanel = new Panel();
-        frame.setContentPane(mainPanel);
+        PanelMotionBased mainPanelMotionBased = new PanelMotionBased();
+        frame.setContentPane(mainPanelMotionBased);
         GridLayout layout = new GridLayout(0, 2);
-        mainPanel.setLayout(layout);
-        Panel camPanel = new Panel();
-        Panel subtractPanel = new Panel();
-        mainPanel.add(camPanel);
-        mainPanel.add(subtractPanel);
+        mainPanelMotionBased.setLayout(layout);
+        PanelMotionBased camPanelMotionBased = new PanelMotionBased();
+        PanelMotionBased subtractPanelMotionBased = new PanelMotionBased();
+        mainPanelMotionBased.add(camPanelMotionBased);
+        mainPanelMotionBased.add(subtractPanelMotionBased);
         frame.setVisible(true);
         frame.setSize(800, 300);
         Mat currRGB = new Mat();
@@ -140,8 +140,8 @@ public class Panel extends JPanel
 
                 capture.read(currRGB);
                 temp = matToBufferedImage(currRGB);
-                camPanel.setimage(temp);
-                camPanel.repaint();
+                camPanelMotionBased.setimage(temp);
+                camPanelMotionBased.repaint();
 
                 Imgproc.cvtColor(currRGB, currGray, Imgproc.COLOR_RGB2GRAY);
 
@@ -220,8 +220,8 @@ public class Panel extends JPanel
 //
 
                 temp = matToBufferedImage(bkg);
-                subtractPanel.setimage(temp);
-                subtractPanel.repaint();
+                subtractPanelMotionBased.setimage(temp);
+                subtractPanelMotionBased.repaint();
 
                 prevRGB = currRGB;
                 Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
