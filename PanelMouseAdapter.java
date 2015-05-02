@@ -11,11 +11,37 @@ public class PanelMouseAdapter extends MouseAdapter
     @Override
     public void mouseClicked(MouseEvent e)
     {
-        master.mouseUL.x = e.getX() - 10;
-        master.mouseUL.y = e.getY() - 10;
-        master.mouseLR.x = master.mouseUL.x + master.selectBoxLen;
-        master.mouseLR.y = master.mouseUL.y + master.selectBoxLen;
-        System.out.println(master.mouseUL.x + " " + master.mouseUL.y);
+        int centerX = e.getX() - 10, centerY = e.getY() - 10;
+
+        master.mouseUL.x = centerX - master.selectBoxLen;
+        master.mouseUL.y = centerY - master.selectBoxLen;
+        master.mouseLR.x = centerX + master.selectBoxLen;
+        master.mouseLR.y = centerY + master.selectBoxLen;
+        selectBoxInCanvas(); // make sure the region selected is within the canvas
+        System.out.println(centerX + " " + centerY);
+        master.selecting = false;
+    }
+
+    private void selectBoxInCanvas()
+    {
+        int maxWidth = master.getImageWidth();
+        int maxHeight = master.getImageHeight();
+        if (master.mouseUL.x < 0) master.mouseUL.x = 0;
+        if (master.mouseUL.x < 0) master.mouseUL.x = 0;
+        if (master.mouseLR.x < 0) master.mouseLR.x = 0;
+        if (master.mouseLR.x < 0) master.mouseLR.x = 0;
+        if (master.mouseUL.y < 0) master.mouseUL.y = 0;
+        if (master.mouseUL.y < 0) master.mouseUL.y = 0;
+        if (master.mouseLR.y < 0) master.mouseLR.y = 0;
+        if (master.mouseLR.y < 0) master.mouseLR.y = 0;
+        if (master.mouseUL.x > maxWidth) master.mouseUL.x = maxWidth - 1;
+        if (master.mouseUL.x > maxWidth) master.mouseUL.x = maxWidth - 1;
+        if (master.mouseLR.x > maxWidth) master.mouseLR.x = maxWidth - 1;
+        if (master.mouseLR.x > maxWidth) master.mouseLR.x = maxWidth - 1;
+        if (master.mouseUL.y > maxHeight) master.mouseUL.y = maxHeight - 1;
+        if (master.mouseUL.y > maxHeight) master.mouseUL.y = maxHeight - 1;
+        if (master.mouseLR.y > maxHeight) master.mouseLR.y = maxHeight - 1;
+        if (master.mouseLR.y > maxHeight) master.mouseLR.y = maxHeight - 1;
     }
 
     public void attach(PanelColorBased panelColorBased)
