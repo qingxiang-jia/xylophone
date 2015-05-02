@@ -5,6 +5,7 @@ import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
 import org.opencv.highgui.VideoCapture;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.imgproc.Moments;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,7 +17,7 @@ public class PanelColorBased extends JPanel
 {
     public Point mouseUL;
     public Point mouseLR;
-    public final int selectBoxLen = 5;
+    public final int selectBoxLen = 10;
     public boolean selecting = true;
 
     private static final long serialVersionUID = 1L;
@@ -139,13 +140,19 @@ public class PanelColorBased extends JPanel
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
             /** learn what to track **/
+            Point sampleBoxUL = new Point(30, 30);
+            Point sampleBoxLR = new Point(sampleBoxUL.x + 2 * camPanelColorBased.selectBoxLen,
+                    sampleBoxUL.y + 2 * camPanelColorBased.selectBoxLen);
             while (camPanelColorBased.selecting) {
                 capture.read(currBGRFrame);
                 Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
+                Core.rectangle(currBGRFrame, sampleBoxUL, sampleBoxLR, green);
                 currBuffImg = matToBufferedImage(currBGRFrame);
                 camPanelColorBased.setimage(currBuffImg);
                 camPanelColorBased.repaint();
             }
+
+            Thread.sleep(1000);
 
             /** compute roi HSV ranges **/
             roi = currBGRFrame.submat((int) camPanelColorBased.mouseUL.y + 2, (int) camPanelColorBased.mouseLR.y - 2,
@@ -177,12 +184,42 @@ public class PanelColorBased extends JPanel
             Scalar high = new Scalar(maxHue, maxSat, maxVal);
 
             /** tracking **/
+            Size erodeSize = new Size(2, 2);
+            Size dilateSize = new Size(1, 1);
+
+            double dM01, dM10, dM00;
+            Point currCentroid = new Point(0, 0);
+            Point lastCentroid = new Point(0, 0);
             while (true) {
                 capture.read(currBGRFrame);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
 
                 /** thresholding HSV img **/
                 Core.inRange(currHSVFrame, low, high, currHSVFrame);
+
+                /** remove noise **/
+                Imgproc.erode(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
+                Imgproc.dilate(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
+
+                /** compute centroid **/
+                Moments moments = Imgproc.moments(currHSVFrame);
+                dM01 = moments.get_m01();
+                dM10 = moments.get_m10();
+                dM00 = moments.get_m00();
+                currCentroid.x = dM10 / dM00;
+                currCentroid.y = dM01 / dM00;
+
+                /** stabilize centroid **/
+                if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
+                        (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
+                        < 25) {
+                    currCentroid.x = lastCentroid.x; // just jittering, ignore
+                    currCentroid.y = lastCentroid.y;
+                }
+
+                /** show centroid **/
+                Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
+                Core.circle(currHSVFrame, currCentroid, 5, green, -1);
 
                 /** update left canvas **/
                 currBuffImg = matToBufferedImage(currBGRFrame);
@@ -193,22 +230,11 @@ public class PanelColorBased extends JPanel
                 currBuffImg = matToBufferedImage(currHSVFrame);
                 binaryPanelColorBased.setimage(currBuffImg);
                 binaryPanelColorBased.repaint();
-            }
 
-//            while (true) {
-//                capture.read(currBGRFrame);
-//
-//
-//                Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
-//                Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
-//
-//
-//
-//
-//                currBuffImg = matToBufferedImage(currBGRFrame);
-//                camPanelColorBased.setimage(currBuffImg);
-//                camPanelColorBased.repaint();
-//            }
+                /** update last centroid **/
+                lastCentroid.x = currCentroid.x;
+                lastCentroid.y = currCentroid.y;
+            }
         }
     }
 }
