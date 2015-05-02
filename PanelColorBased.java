@@ -79,20 +79,21 @@ public class PanelColorBased extends JPanel
     public static void main(String arg[]) throws Exception
     {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        JFrame frame = new JFrame("BasicPanel");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 400);
+        JFrame GUIframe = new JFrame("BasicPanel");
+        GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        GUIframe.setSize(400, 400);
         PanelColorBased mainPanelMotionBased = new PanelColorBased();
-        frame.setContentPane(mainPanelMotionBased);
+        GUIframe.setContentPane(mainPanelMotionBased);
         GridLayout layout = new GridLayout(0, 2);
         mainPanelMotionBased.setLayout(layout);
-        PanelColorBased camPanelMotionBased = new PanelColorBased();
-        PanelColorBased subtractPanelMotionBased = new PanelColorBased();
-        mainPanelMotionBased.add(camPanelMotionBased);
-        mainPanelMotionBased.add(subtractPanelMotionBased);
-        frame.setVisible(true);
-        frame.setSize(800, 300);
-        BufferedImage temp;
+        PanelColorBased camPanelColorBased = new PanelColorBased();
+        PanelColorBased subtractPanelColorBased = new PanelColorBased();
+        mainPanelMotionBased.add(camPanelColorBased);
+        mainPanelMotionBased.add(subtractPanelColorBased);
+        GUIframe.setVisible(true);
+        GUIframe.setSize(800, 300);
+        BufferedImage currBuffImg;
+        Mat currBGRFrame = new Mat();
         VideoCapture capture = new VideoCapture(1);
 
         if (capture.isOpened()) {
@@ -100,10 +101,11 @@ public class PanelColorBased extends JPanel
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 360);
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
-            boolean empty = true;
-
             while (true) {
-
+                capture.read(currBGRFrame);
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
             }
         }
     }
