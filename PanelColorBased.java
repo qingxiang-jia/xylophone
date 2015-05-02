@@ -1,4 +1,5 @@
 
+import com.sun.tools.doclets.formats.html.SourceToHTMLConverter;
 import org.opencv.core.*;
 import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
@@ -15,7 +16,7 @@ public class PanelColorBased extends JPanel
 {
     public Point mouseUL;
     public Point mouseLR;
-    public final int selectBoxLen = 20;
+    public final int selectBoxLen = 5;
     public boolean selecting = true;
 
     private static final long serialVersionUID = 1L;
@@ -106,9 +107,9 @@ public class PanelColorBased extends JPanel
         GridLayout layout = new GridLayout(0, 2);
         mainPanelMotionBased.setLayout(layout);
         PanelColorBased camPanelColorBased = new PanelColorBased();
-        PanelColorBased subtractPanelColorBased = new PanelColorBased();
+        PanelColorBased binaryPanelColorBased = new PanelColorBased();
         mainPanelMotionBased.add(camPanelColorBased);
-        mainPanelMotionBased.add(subtractPanelColorBased);
+        mainPanelMotionBased.add(binaryPanelColorBased);
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 280);
 
@@ -130,7 +131,7 @@ public class PanelColorBased extends JPanel
         Mat currBGRFrame = new Mat();
         Mat currHSVFrame = new Mat();
 
-        Mat roi = new Mat();
+        Mat roi;
 
         if (capture.isOpened()) {
             // set resolution
@@ -146,23 +147,52 @@ public class PanelColorBased extends JPanel
                 camPanelColorBased.repaint();
             }
 
-            /** compute roi HSV hue range **/
+            /** compute roi HSV ranges **/
             roi = currBGRFrame.submat((int) camPanelColorBased.mouseUL.y + 2, (int) camPanelColorBased.mouseLR.y - 2,
                     (int) camPanelColorBased.mouseUL.x + 2, (int) camPanelColorBased.mouseLR.x - 2);
             Imgproc.cvtColor(roi, roi, Imgproc.COLOR_BGR2HSV);
 
-            Mat hue = new Mat();
-            ArrayList<Mat> justHue = new ArrayList<>();
-            justHue.add(hue);
-            Core.split(roi, justHue);
+            MatOfDouble mean = new MatOfDouble(); // h s v
+            MatOfDouble stddev = new MatOfDouble(); // h s v
+            Core.meanStdDev(roi, mean, stddev);
 
-            Scalar meanHue = Core.mean(justHue.get(0));
+            // for readability
+            double meanHue = mean.get(0, 0)[0], stddevHue = stddev.get(0, 0)[0];
+            double meanSat = mean.get(1, 0)[0], stddevSat = stddev.get(1, 0)[0];
+            double meanVal = mean.get(2, 0)[0], stddevVal = stddev.get(2, 0)[0];
 
-            System.out.println("The mean of hue is " + Arrays.toString(meanHue.val));
+            double minHue = meanHue - 3 * stddevHue;
+            double maxHue = meanHue + 3 * stddevHue;
 
+            double minSat = meanSat - 3 * stddevSat;
+            double maxSat = meanSat + 3 * stddevSat;
 
+            double minVal = meanVal - 3 * stddevVal;
+            double maxVal = meanVal + 3 * stddevVal;
+
+            System.out.printf("minHue: %f   maxHue: %f\nminSat: %f   maxSat: %f\nminVal: %f   maxVal: %f\n",
+                    minHue, maxHue, minSat, maxSat, minVal, maxVal);
+
+            Scalar low = new Scalar(minHue, minSat, minVal);
+            Scalar high = new Scalar(maxHue, maxSat, maxVal);
+
+            /** tracking **/
             while (true) {
+                capture.read(currBGRFrame);
+                Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
 
+                /** thresholding HSV img **/
+                Core.inRange(currHSVFrame, low, high, currHSVFrame);
+
+                /** update left canvas **/
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
+
+                /** update right canvas **/
+                currBuffImg = matToBufferedImage(currHSVFrame);
+                binaryPanelColorBased.setimage(currBuffImg);
+                binaryPanelColorBased.repaint();
             }
 
 //            while (true) {
