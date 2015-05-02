@@ -8,17 +8,23 @@ import org.opencv.imgproc.Imgproc;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 
 public class PanelColorBased extends JPanel
 {
+    public Point mouseUL;
+    public Point mouseLR;
+    public final int selectBoxLen = 20;
+
     private static final long serialVersionUID = 1L;
     private BufferedImage image;
+
 
     // Create a constructor method
     public PanelColorBased()
     {
         super();
+        mouseUL = new Point(0, 0);
+        mouseLR = new Point(0, 0);
     }
 
     private BufferedImage getimage()
@@ -78,7 +84,7 @@ public class PanelColorBased extends JPanel
 
     public static void main(String arg[]) throws Exception
     {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        /** GUI set up **/
         JFrame GUIframe = new JFrame("BasicPanel");
         GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         GUIframe.setSize(400, 400);
@@ -91,10 +97,25 @@ public class PanelColorBased extends JPanel
         mainPanelMotionBased.add(camPanelColorBased);
         mainPanelMotionBased.add(subtractPanelColorBased);
         GUIframe.setVisible(true);
-        GUIframe.setSize(800, 300);
+        GUIframe.setSize(800, 280);
+
+        /** img processing **/
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+        Scalar red = new Scalar(0, 0, 255);
+        Scalar green = new Scalar(0, 255, 0);
+        Scalar blue = new Scalar(255, 0, 0);
+
         BufferedImage currBuffImg;
-        Mat currBGRFrame = new Mat();
+
         VideoCapture capture = new VideoCapture(1);
+
+        PanelMouseAdapter mouseAdapter = new PanelMouseAdapter();
+        mouseAdapter.attach(camPanelColorBased);
+        camPanelColorBased.addMouseListener(mouseAdapter);
+
+        Mat currBGRFrame = new Mat();
+        Mat currHSVFrame = new Mat();
 
         if (capture.isOpened()) {
             // set resolution
@@ -103,6 +124,14 @@ public class PanelColorBased extends JPanel
 
             while (true) {
                 capture.read(currBGRFrame);
+
+
+                Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
+                Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
+
+
+
+
                 currBuffImg = matToBufferedImage(currBGRFrame);
                 camPanelColorBased.setimage(currBuffImg);
                 camPanelColorBased.repaint();
