@@ -75,58 +75,6 @@ public class Panel extends JPanel
         g.drawImage(temp, 10, 10, temp.getWidth(), temp.getHeight(), this);
     }
 
-//    public static void main(String arg[]) throws Exception
-//    {
-//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-//        JFrame frame = new JFrame("BasicPanel");
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setSize(400, 400);
-//        Panel mainPanel = new Panel();
-//        frame.setContentPane(mainPanel);
-//        GridLayout layout = new GridLayout(0, 2);
-//        mainPanel.setLayout(layout);
-//        Panel camPanel = new Panel();
-//        Panel subtractPanel = new Panel();
-//        mainPanel.add(camPanel);
-//        mainPanel.add(subtractPanel);
-//        frame.setVisible(true);
-//        frame.setSize(1300, 500);
-//        Mat currRGB = new Mat();
-//        Mat nextRGB = new Mat();
-//        Mat currGray = new Mat();
-//        Mat nextGray = new Mat();
-//        Mat diff = new Mat();
-//        Mat thresholdImg = new Mat();
-//        BufferedImage temp;
-//        VideoCapture capture = new VideoCapture(1);
-//        if (capture.isOpened()) {
-//            // set resulution
-//            capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 600);
-//            capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 400);
-//
-//            while (true) {
-//
-//                capture.read(currRGB);
-//                temp = matToBufferedImage(currRGB);
-//                camPanel.setimage(temp);
-//                camPanel.repaint();
-//
-//                Imgproc.cvtColor(currRGB, currGray, Imgproc.COLOR_RGB2GRAY);
-//
-//                capture.read(nextRGB);
-//
-//
-//                Imgproc.cvtColor(nextRGB, nextGray, Imgproc.COLOR_RGB2GRAY); // don't need to keep prevRGB
-//                Core.absdiff(currGray, nextGray, diff);
-//                Imgproc.threshold(diff, thresholdImg, 40, 255, Imgproc.THRESH_BINARY);
-//
-//                temp = matToBufferedImage(thresholdImg);
-//
-//                subtractPanel.setimage(temp);
-//                subtractPanel.repaint();
-//            }
-//        }
-//    }
 
     public static void main(String arg[]) throws Exception
     {
@@ -152,20 +100,30 @@ public class Panel extends JPanel
         Mat thresholdImg = new Mat();
         BufferedImage temp;
         VideoCapture capture = new VideoCapture(1);
-        Size blueSize = new Size(2.0, 2.0);
+        Size blurSize = new Size(2.0, 2.0);
 
         Mat contourImg = new Mat();
         Mat hierachy = new Mat();
         ArrayList<MatOfPoint> contours = new ArrayList<>();
+        ArrayList<MatOfPoint> filteredContours = new ArrayList<>();
 
         Scalar red = new Scalar(0, 0, 255);
         Scalar green = new Scalar(0, 255, 0);
+        Scalar blue = new Scalar(255, 0, 0);
         Mat bkg = new Mat();
         Rect bRect = new Rect();
         MatOfPoint2f matOfPointForRectWithAngle;
 
+        Point hitIndicator = new Point();
+        hitIndicator.x = 20;
+        hitIndicator.y = 20;
+
+        ArrayList<RotatedRect> lastFrameRRects = new ArrayList<>();
+        ArrayList<RotatedRect> rRects = new ArrayList<>();
+        double dY1 = 0, dY2 = 0;
+
         if (capture.isOpened()) {
-            // set resulution
+            // set resolution
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 360);
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
@@ -173,9 +131,12 @@ public class Panel extends JPanel
             Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
             Thread.sleep(500);
 
+            boolean empty = true;
+
             while (true) {
                 contours.clear();
-
+                filteredContours.clear();
+                rRects.clear();
 
                 capture.read(currRGB);
                 temp = matToBufferedImage(currRGB);
@@ -186,52 +147,77 @@ public class Panel extends JPanel
 
                 Core.absdiff(currGray, prevGray, diff);
                 Imgproc.threshold(diff, thresholdImg, 20, 255, Imgproc.THRESH_BINARY);
-                Imgproc.blur(thresholdImg, thresholdImg, blueSize);
+//                Imgproc.blur(thresholdImg, thresholdImg, blurSize);
 
                 /** find contours **/
                 Imgproc.findContours(thresholdImg, contours, hierachy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+                /** only keep big enough contours **/
+                // iterating contours, drop the small ones
+                for (MatOfPoint contour : contours) {
+                    if (Imgproc.contourArea(contour) >= 200.0)
+                        filteredContours.add(contour);
+                }
 
                 thresholdImg.copyTo(bkg);
                 Imgproc.cvtColor(bkg, bkg, Imgproc.COLOR_GRAY2RGB);
 //                Imgproc.drawContours(bkg, contours, -1, red);
 
-                /** bounding rectangle **/
-//                for (MatOfPoint contour : contours) {
-//                    bRect = Imgproc.boundingRect(contour);
-//                    Core.rectangle(bkg, new Point(bRect.x, bRect.y), new Point(bRect.x + bRect.width, bRect.y + bRect.height), red);
-//                }
 
-                /** bounding rectangle with angle - draw largest **/
-//                RotatedRect largestRect = null;
-//                for (MatOfPoint contour : contours) {
-//                    matOfPointForRectWithAngle = new MatOfPoint2f(contour.toArray());
-//                    RotatedRect rRect = Imgproc.minAreaRect(matOfPointForRectWithAngle);
-//                    if (largestRect == null)
-//                        largestRect = rRect;
-//                    else if (rRect.size.area() > largestRect.size.area())
-//                        largestRect = rRect;
-//                }
-//                // draw the largest rectangle
-//                if (largestRect != null) {
-//                    Point[] pts = new Point[4];
-//                    largestRect.points(pts);
-//                    for(int i = 0; i < 4; i++)
-//                        Core.line(bkg, pts[i], pts[(i + 1) % 4], green);
-//                    Core.circle(bkg, largestRect.center, 5, red, -1);
-//                }
-
-                /** bounding rectangle with angle - draw large ones **/
-                for (MatOfPoint contour : contours) {
+//                /** bounding rectangle with angle **/
+                for (MatOfPoint contour : filteredContours) {
                     matOfPointForRectWithAngle = new MatOfPoint2f(contour.toArray());
                     RotatedRect rRect = Imgproc.minAreaRect(matOfPointForRectWithAngle);
-                    if (rRect.size.area() > 200) {
-                        Point[] pts = new Point[4];
-                        rRect.points(pts);
-                        for(int i = 0; i < 4; i++)
-                            Core.line(bkg, pts[i], pts[(i + 1) % 4], green);
-                        Core.circle(bkg, rRect.center, 5, red, -1);
+
+                    rRects.add(rRect);
+
+                    /** draw bounding rectangle **/
+                    Point[] pts = new Point[4];
+                    rRect.points(pts);
+                    for(int i = 0; i < 4; i++)
+                        Core.line(bkg, pts[i], pts[(i + 1) % 4], green);
+                    Core.circle(bkg, rRect.center, 5, red, -1);
+//                    Core.putText(bkg, "1", rRect.center, 1, 1.0, green);
+                }
+//
+//
+//                // crude hit indicator
+                if (rRects.size() != 0) {
+                    // for now deals with only one stick
+                    RotatedRect currRRect = rRects.get(0);
+                    empty = false;
+                    RotatedRect closestRRect = null;
+                    for (RotatedRect lastFrameRRect : lastFrameRRects) { // find the closest rectangle in last frame
+                        if (closestRRect == null) {
+                            closestRRect = lastFrameRRect;
+                        } else {
+                            if (((currRRect.center.x - lastFrameRRect.center.x) * (currRRect.center.x - lastFrameRRect.center.x))
+                                    + ((currRRect.center.y - lastFrameRRect.center.y) * (currRRect.center.y - lastFrameRRect.center.y))
+                                    < ((currRRect.center.x - closestRRect.center.x) * (currRRect.center.x - closestRRect.center.x))
+                                    + ((currRRect.center.y - closestRRect.center.y) * (currRRect.center.y - closestRRect.center.y)))
+                                closestRRect = lastFrameRRect;
+                        }
+                    }
+                    if (closestRRect != null) {
+                        if (dY1 > 0 && currRRect.center.y - closestRRect.center.y < 0) {
+                            Core.circle(bkg, hitIndicator, 10, green, -1);
+                            System.out.println("hit - direction change");
+                        }
+                        dY1 = currRRect.center.y - closestRRect.center.y;
+                        System.out.println(currRRect.center.y);
                     }
                 }
+                if (filteredContours.size() == 0 && !empty) { // is a hit at current frame
+                    // if change in y is positive, then don't count this as a hit -- just move up the stick
+                    // for now deals with only one stick
+                    empty = true;
+                    if (dY1 > 0) {
+                        Core.circle(bkg, hitIndicator, 10, green, -1);
+                        System.out.println("hit - static");
+                        dY1 = 0;
+                    }
+                }
+//
 
                 temp = matToBufferedImage(bkg);
                 subtractPanel.setimage(temp);
@@ -239,6 +225,8 @@ public class Panel extends JPanel
 
                 prevRGB = currRGB;
                 Imgproc.cvtColor(prevRGB, prevGray, Imgproc.COLOR_RGB2GRAY);
+
+                lastFrameRRects = new ArrayList<>(rRects);
             }
         }
     }
