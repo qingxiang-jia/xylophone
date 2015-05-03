@@ -1,5 +1,3 @@
-
-import com.sun.tools.doclets.formats.html.SourceToHTMLConverter;
 import org.opencv.core.*;
 import org.opencv.core.Point;
 import org.opencv.highgui.Highgui;
@@ -10,8 +8,6 @@ import org.opencv.imgproc.Moments;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 public class PanelColorBased extends JPanel
 {
@@ -92,7 +88,7 @@ public class PanelColorBased extends JPanel
     public void paintComponent(Graphics g)
     {
         BufferedImage temp = getimage();
-        if (temp == null) return ;
+        if (temp == null) return;
         g.drawImage(temp, 10, 10, temp.getWidth(), temp.getHeight(), this);
     }
 
@@ -197,6 +193,8 @@ public class PanelColorBased extends JPanel
 
             double direction = 0; // direction the mallet moves
             Point hitIndicator = new Point(20, 20);
+            final int ZERO_VAL = 5;
+            int zeroCounter = ZERO_VAL;
             while (true) {
                 capture.read(currBGRFrame);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
@@ -219,7 +217,7 @@ public class PanelColorBased extends JPanel
                 /** stabilize centroid **/
                 if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
                         (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
-                        < 20) {
+                        < 30) {
                     currCentroid.x = lastCentroid.x; // just jittering, ignore
                     currCentroid.y = lastCentroid.y;
                 }
@@ -229,11 +227,22 @@ public class PanelColorBased extends JPanel
                 Core.circle(currHSVFrame, currCentroid, 5, green, -1);
 
                 /** hit detection **/
-                if (direction > 0 && (currCentroid.y - lastCentroid.y < 0)) { // hit
+                if (currCentroid.y - lastCentroid.y > 0) { // keeps going down
+                    zeroCounter = ZERO_VAL;
+                    direction = currCentroid.y - lastCentroid.y;
+                } else if (currCentroid.y - lastCentroid.y <= 0 && direction > 0) { // switching direction to up
                     midi.sound((int) (currCentroid.x / 360.0 * 77 + 50));
                     Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
+                    direction = currCentroid.y - lastCentroid.y;
+                    zeroCounter = ZERO_VAL;
+                } else if (currCentroid.y - lastCentroid.y == 0) {
+                    if (zeroCounter != 0) { // if next time it goes up, there is still chance to sound
+                        zeroCounter--;
+                    } else {
+                        direction = 0;
+                    }
                 }
-                direction = currCentroid.y - lastCentroid.y;
+
                 System.out.println(direction);
 
                 /** update left canvas **/
