@@ -114,6 +114,10 @@ public class PanelColorBased extends JPanel
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 280);
 
+        /** set up MIDI **/
+        MIDI midi = new MIDI();
+        midi.run(); // start a new thread
+
         /** img processing **/
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
@@ -215,7 +219,7 @@ public class PanelColorBased extends JPanel
                 /** stabilize centroid **/
                 if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
                         (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
-                        < 25) {
+                        < 20) {
                     currCentroid.x = lastCentroid.x; // just jittering, ignore
                     currCentroid.y = lastCentroid.y;
                 }
@@ -225,10 +229,12 @@ public class PanelColorBased extends JPanel
                 Core.circle(currHSVFrame, currCentroid, 5, green, -1);
 
                 /** hit detection **/
-                if (direction > 0 && (currCentroid.y - lastCentroid.y <= 0)) { // hit
+                if (direction > 0 && (currCentroid.y - lastCentroid.y < 0)) { // hit
+                    midi.sound((int) (currCentroid.x / 360.0 * 77 + 50));
                     Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                 }
                 direction = currCentroid.y - lastCentroid.y;
+                System.out.println(direction);
 
                 /** update left canvas **/
                 currBuffImg = matToBufferedImage(currBGRFrame);
