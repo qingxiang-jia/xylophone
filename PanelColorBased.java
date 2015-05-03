@@ -190,6 +190,9 @@ public class PanelColorBased extends JPanel
             double dM01, dM10, dM00;
             Point currCentroid = new Point(0, 0);
             Point lastCentroid = new Point(0, 0);
+
+            double direction = 0; // direction the mallet moves
+            Point hitIndicator = new Point(20, 20);
             while (true) {
                 capture.read(currBGRFrame);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
@@ -220,6 +223,12 @@ public class PanelColorBased extends JPanel
                 /** show centroid **/
                 Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
                 Core.circle(currHSVFrame, currCentroid, 5, green, -1);
+
+                /** hit detection **/
+                if (direction > 0 && (currCentroid.y - lastCentroid.y <= 0)) { // hit
+                    Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
+                }
+                direction = currCentroid.y - lastCentroid.y;
 
                 /** update left canvas **/
                 currBuffImg = matToBufferedImage(currBGRFrame);
