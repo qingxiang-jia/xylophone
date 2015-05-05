@@ -19,6 +19,11 @@ public class PanelColorBased extends JPanel
     private static final long serialVersionUID = 1L;
     private BufferedImage image;
 
+    public final int LEARN_LAYOUT = 0;
+    public final int LEARN_COLOR = 1;
+    public int stage;
+    public int verticesLearned;
+    public Point[] vertices;
 
     // Create a constructor method
     public PanelColorBased()
@@ -26,6 +31,9 @@ public class PanelColorBased extends JPanel
         super();
         mouseUL = new Point(0, 0);
         mouseLR = new Point(0, 0);
+
+        verticesLearned = 0;
+        vertices = new Point[4];
     }
 
     private BufferedImage getimage()
@@ -139,28 +147,51 @@ public class PanelColorBased extends JPanel
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 360);
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
-            /** learn the xylophone layout (for now, CDEFGABC **/
-//            Mat accumBGR = new Mat();
-            /** take a photo with long exposure **/
-//            int exposure = 20;
-//            for (int i = 0; i < exposure; i++) {
+            /** learn the xylophone layout (for now, CDEFGABC) **/
+            camPanelColorBased.stage = camPanelColorBased.LEARN_LAYOUT; // specify stage
+
+            while (camPanelColorBased.verticesLearned < 4) { // display the video so the user can select paper vertices
                 capture.read(currBGRFrame);
-//                accumBGR
-//            }
 
-            /** convert to binary **/
-            Mat binary = new Mat();
-            Imgproc.cvtColor(currBGRFrame, binary, Imgproc.COLOR_RGB2GRAY);
-            Imgproc.threshold(binary, binary, 100, 255, Imgproc.THRESH_BINARY_INV);
+                // update GUI
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
+            }
 
-            /** update GUI **/
-            currBuffImg = matToBufferedImage(currBGRFrame);
-            camPanelColorBased.setimage(currBuffImg);
-            camPanelColorBased.repaint();
+            // four vertices obtained
+            Mat paperMask = Mat.zeros(currBGRFrame.size(), CvType.CV_8UC1);
 
-            currBuffImg = matToBufferedImage(binary);
+            // connect vertices
+            Scalar white8UC1 = new Scalar(255);
+            Core.line(paperMask, camPanelColorBased.vertices[0], camPanelColorBased.vertices[1], white8UC1);
+            Core.line(paperMask, camPanelColorBased.vertices[1], camPanelColorBased.vertices[2], white8UC1);
+            Core.line(paperMask, camPanelColorBased.vertices[2], camPanelColorBased.vertices[3], white8UC1);
+            Core.line(paperMask, camPanelColorBased.vertices[0], camPanelColorBased.vertices[3], white8UC1);
+
+            // update GUI
+            currBuffImg = matToBufferedImage(paperMask);
             binaryPanelColorBased.setimage(currBuffImg);
             binaryPanelColorBased.repaint();
+
+//            capture.read(currBGRFrame);
+//
+//            // convert to binary
+//            Mat binary = new Mat();
+//            Imgproc.cvtColor(currBGRFrame, binary, Imgproc.COLOR_RGB2GRAY);
+//            Imgproc.threshold(binary, binary, 110, 255, Imgproc.THRESH_BINARY_INV);
+//
+//
+//
+//
+//            // update GUI
+//            currBuffImg = matToBufferedImage(currBGRFrame);
+//            camPanelColorBased.setimage(currBuffImg);
+//            camPanelColorBased.repaint();
+//
+//            currBuffImg = matToBufferedImage(binary);
+//            binaryPanelColorBased.setimage(currBuffImg);
+//            binaryPanelColorBased.repaint();
 
             while (true) {
 
@@ -169,6 +200,7 @@ public class PanelColorBased extends JPanel
 //
 //
 //            /** learn what to track **/
+//            camPanelColorBased.stage = camPanelColorBased.LEARN_COLOR;
 //            Point sampleBoxUL = new Point(30, 30);
 //            Point sampleBoxLR = new Point(sampleBoxUL.x + 2 * camPanelColorBased.selectBoxLen,
 //                    sampleBoxUL.y + 2 * camPanelColorBased.selectBoxLen);

@@ -1,3 +1,5 @@
+import org.opencv.core.Point;
+
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -9,16 +11,23 @@ public class PanelMouseAdapter extends MouseAdapter
     PanelColorBased master;
 
     @Override
-    public void mouseClicked(MouseEvent e)
+    public void mouseClicked(MouseEvent e) // simple DFA
     {
         int centerX = e.getX() - 10, centerY = e.getY() - 10; // JFrame-canvas offset
-
-        master.mouseUL.x = centerX - master.selectBoxLen;
-        master.mouseUL.y = centerY - master.selectBoxLen;
-        master.mouseLR.x = centerX + master.selectBoxLen;
-        master.mouseLR.y = centerY + master.selectBoxLen;
-        selectBoxInCanvas(); // make sure the region selected is within the canvas
-        master.selecting = false;
+        if (master.stage == master.LEARN_COLOR) {
+            master.mouseUL.x = centerX - master.selectBoxLen;
+            master.mouseUL.y = centerY - master.selectBoxLen;
+            master.mouseLR.x = centerX + master.selectBoxLen;
+            master.mouseLR.y = centerY + master.selectBoxLen;
+            selectBoxInCanvas(); // make sure the region selected is within the canvas
+            master.selecting = false;
+        } else if (master.stage == master.LEARN_LAYOUT) {
+            if (master.verticesLearned < 4) {
+                master.vertices[master.verticesLearned] = new Point(centerX, centerY);
+                master.verticesLearned++;
+                System.out.println(master.verticesLearned);
+            }
+        }
     }
 
     private void selectBoxInCanvas()
