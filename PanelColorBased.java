@@ -8,6 +8,8 @@ import org.opencv.imgproc.Moments;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class PanelColorBased extends JPanel
 {
@@ -36,12 +38,12 @@ public class PanelColorBased extends JPanel
         vertices = new Point[4];
     }
 
-    private BufferedImage getimage()
+    public BufferedImage getimage()
     {
         return image;
     }
 
-    private void setimage(BufferedImage newimage)
+    public void setimage(BufferedImage newimage)
     {
         image = newimage;
         return;
@@ -146,6 +148,7 @@ public class PanelColorBased extends JPanel
             // set resolution
             capture.set(Highgui.CV_CAP_PROP_FRAME_WIDTH, 360);
             capture.set(Highgui.CV_CAP_PROP_FRAME_HEIGHT, 240);
+            Size frameSize = new Size(360, 240);
 
             /** learn the xylophone layout (for now, CDEFGABC) **/
             camPanelColorBased.stage = camPanelColorBased.LEARN_LAYOUT; // specify stage
@@ -174,28 +177,127 @@ public class PanelColorBased extends JPanel
             binaryPanelColorBased.setimage(currBuffImg);
             binaryPanelColorBased.repaint();
 
-//            capture.read(currBGRFrame);
-//
-//            // convert to binary
-//            Mat binary = new Mat();
-//            Imgproc.cvtColor(currBGRFrame, binary, Imgproc.COLOR_RGB2GRAY);
-//            Imgproc.threshold(binary, binary, 110, 255, Imgproc.THRESH_BINARY_INV);
-//
-//
-//
-//
-//            // update GUI
-//            currBuffImg = matToBufferedImage(currBGRFrame);
-//            camPanelColorBased.setimage(currBuffImg);
-//            camPanelColorBased.repaint();
-//
-//            currBuffImg = matToBufferedImage(binary);
-//            binaryPanelColorBased.setimage(currBuffImg);
-//            binaryPanelColorBased.repaint();
+            Thread.sleep(500); // optional
 
+            // find the contour
+            Mat temp = new Mat();
+            paperMask.copyTo(temp);
+            ArrayList<MatOfPoint> theContour = new ArrayList<>(2);
+            Mat tempHierachy = new Mat();
+            Imgproc.findContours(temp, theContour, tempHierachy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            Core.fillConvexPoly(paperMask, theContour.get(0), white8UC1);
+
+            // update GUI
+            currBuffImg = matToBufferedImage(paperMask);
+            binaryPanelColorBased.setimage(currBuffImg);
+            binaryPanelColorBased.repaint();
+
+            /** extract layout **/
+
+            capture.read(currBGRFrame);//todo provide more exposure
+
+            /** capture de-noised image of layout **/
+            /** De-noise BEGIN **/
+            // visualization: left = sum of right / # of right
+            Mat left = Mat.zeros(frameSize, CvType.CV_8UC3);
+            Mat right = Mat.zeros(frameSize, CvType.CV_8UC3);
+            Mat sum = Mat.zeros(frameSize, CvType.CV_32FC3); // trials & errors, not clearly documented :(
+
+            int cnt = 0;
+
+            while (true) {
+                capture.read(right);
+                if (cnt != 20) {
+                    Imgproc.accumulate(right, sum);
+                    cnt++;
+                } else {
+                    Core.convertScaleAbs(sum, left, 1.0/20, 0.0);
+                    currBuffImg = matToBufferedImage(left);
+                    camPanelColorBased.setimage(currBuffImg);
+                    camPanelColorBased.repaint();
+                    break;
+                }
+            }
+
+
+            /** De-noise END **/
+
+            // convert to binary
+            Mat binary = new Mat();
+            Imgproc.cvtColor(left, binary, Imgproc.COLOR_RGB2GRAY);
+            Imgproc.threshold(binary, binary, 40, 100, Imgproc.THRESH_BINARY_INV); // pixels under thresh becomes maxval
+
+            // apply mask
+            Mat masked = new Mat();
+            binary.copyTo(masked, paperMask);
+
+//            // apply Hough transform
+//            Mat lines = new Mat();
+//            Imgproc.HoughLines(binary, lines, 1, Math.PI/180, 100, 0, 0);
+//            for (int i = 0; i < binary.size().height; i++) {
+//                for (int j = 0; j < binary.size().width; j++) {
+//                    System.out.println(Arrays.toString(lines.get(i, j)));
+//                }
+//            }
+
+            // update GUI
+            currBuffImg = matToBufferedImage(left);
+            camPanelColorBased.setimage(currBuffImg);
+            camPanelColorBased.repaint();
+
+            currBuffImg = matToBufferedImage(masked);
+            binaryPanelColorBased.setimage(currBuffImg);
+            binaryPanelColorBased.repaint();
             while (true) {
 
             }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //
 //
