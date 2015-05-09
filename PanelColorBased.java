@@ -109,14 +109,16 @@ public class PanelColorBased extends JPanel
         JFrame GUIframe = new JFrame("BasicPanel");
         GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         GUIframe.setSize(400, 400);
-        PanelColorBased mainPanelMotionBased = new PanelColorBased();
-        GUIframe.setContentPane(mainPanelMotionBased);
-        GridLayout layout = new GridLayout(0, 2);
-        mainPanelMotionBased.setLayout(layout);
+        PanelColorBased mainPanelColorBased = new PanelColorBased();
+        GUIframe.setContentPane(mainPanelColorBased);
+        GridLayout layout = new GridLayout(0, 3);
+        mainPanelColorBased.setLayout(layout);
         PanelColorBased camPanelColorBased = new PanelColorBased();
         PanelColorBased binaryPanelColorBased = new PanelColorBased();
-        mainPanelMotionBased.add(camPanelColorBased);
-        mainPanelMotionBased.add(binaryPanelColorBased);
+        mainPanelColorBased.add(camPanelColorBased);
+        mainPanelColorBased.add(binaryPanelColorBased);
+        JSlider slider = new JSlider(0, 255, 50); // min, max, default
+        mainPanelColorBased.add(slider);
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 280);
 
@@ -196,60 +198,60 @@ public class PanelColorBased extends JPanel
 
             capture.read(currBGRFrame);//todo provide more exposure
 
-            /** capture de-noised image of layout **/
-            /** De-noise BEGIN **/
-            // visualization: left = sum of right / # of right
-            Mat left = Mat.zeros(frameSize, CvType.CV_8UC3);
-            Mat right = Mat.zeros(frameSize, CvType.CV_8UC3);
-            Mat sum = Mat.zeros(frameSize, CvType.CV_32FC3); // trials & errors, not clearly documented :(
+            /** capture de-noised image of layout - provide video and slider bar let user decide what's best **/
 
-            int cnt = 0;
+            Mat binary = new Mat(); // store binary img
+            Mat masked = new Mat(); // store masked binary img
+            Mat contoursToFind = new Mat(); // store img to be found contours
+            Mat hierarchy = new Mat();
 
             while (true) {
-                capture.read(right);
-                if (cnt != 20) {
-                    Imgproc.accumulate(right, sum);
-                    cnt++;
-                } else {
-                    Core.convertScaleAbs(sum, left, 1.0/20, 0.0);
-                    currBuffImg = matToBufferedImage(left);
-                    camPanelColorBased.setimage(currBuffImg);
-                    camPanelColorBased.repaint();
-                    break;
+
+                /** De-noise BEGIN **/
+                // visualization: left = sum of right / # of right
+                Mat left = Mat.zeros(frameSize, CvType.CV_8UC3);
+                Mat right = Mat.zeros(frameSize, CvType.CV_8UC3);
+                Mat sum = Mat.zeros(frameSize, CvType.CV_32FC3); // trials & errors, not clearly documented :(
+
+                int cnt = 0;
+
+                while (true) {
+                    capture.read(right);
+                    if (cnt != 20) {
+                        Imgproc.accumulate(right, sum);
+                        cnt++;
+                    } else {
+                        Core.convertScaleAbs(sum, left, 1.0/20, 0.0);
+                        currBuffImg = matToBufferedImage(left);
+                        camPanelColorBased.setimage(currBuffImg);
+                        camPanelColorBased.repaint();
+                        break;
+                    }
                 }
-            }
 
+                /** De-noise END **/
 
-            /** De-noise END **/
+                // convert to binary
+                Imgproc.cvtColor(left, binary, Imgproc.COLOR_RGB2GRAY);
+                Imgproc.threshold(binary, binary, slider.getValue(), 255, Imgproc.THRESH_BINARY_INV); // pixels under thresh becomes maxval
 
-            // convert to binary
-            Mat binary = new Mat();
-            Imgproc.cvtColor(left, binary, Imgproc.COLOR_RGB2GRAY);
-            Imgproc.threshold(binary, binary, 40, 100, Imgproc.THRESH_BINARY_INV); // pixels under thresh becomes maxval
+                // apply mask
+                binary.copyTo(masked, paperMask);
 
-            // apply mask
-            Mat masked = new Mat();
-            binary.copyTo(masked, paperMask);
+                // find contours
+                masked.copyTo(contoursToFind);
+                ArrayList<MatOfPoint> contours = new ArrayList<>();
+                Imgproc.findContours(contoursToFind, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
-//            // apply Hough transform
-//            Mat lines = new Mat();
-//            Imgproc.HoughLines(binary, lines, 1, Math.PI/180, 100, 0, 0);
-//            for (int i = 0; i < binary.size().height; i++) {
-//                for (int j = 0; j < binary.size().width; j++) {
-//                    System.out.println(Arrays.toString(lines.get(i, j)));
-//                }
-//            }
+                //currBuffImg = matToBufferedImage(masked);
+                currBuffImg = matToBufferedImage(masked);
+                binaryPanelColorBased.setimage(currBuffImg);
+                binaryPanelColorBased.repaint();
 
-            // update GUI
-            currBuffImg = matToBufferedImage(left);
-            camPanelColorBased.setimage(currBuffImg);
-            camPanelColorBased.repaint();
-
-            currBuffImg = matToBufferedImage(masked);
-            binaryPanelColorBased.setimage(currBuffImg);
-            binaryPanelColorBased.repaint();
-            while (true) {
-
+                // update GUI
+                currBuffImg = matToBufferedImage(contoursToFind);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
             }
 
 
