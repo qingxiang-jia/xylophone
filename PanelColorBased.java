@@ -7,6 +7,8 @@ import org.opencv.imgproc.Moments;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.*;
 
@@ -116,14 +118,31 @@ public class PanelColorBased extends JPanel
         PanelColorBased binaryPanelColorBased = new PanelColorBased();
         mainPanelColorBased.add(camPanelColorBased);
         mainPanelColorBased.add(binaryPanelColorBased);
+        JPanel options = new JPanel();
         JSlider slider = new JSlider(0, 255, 50); // min, max, default
-        mainPanelColorBased.add(slider);
+        options.add(slider);
+        ConditionButton confirmSlider = new ConditionButton();
+        confirmSlider.setText("Looks Good");
+        options.add(confirmSlider);
+        mainPanelColorBased.add(options);
         GUIframe.setVisible(true);
         GUIframe.setSize(1200, 280);
 
         /** set up MIDI **/
         MIDI midi = new MIDI();
         midi.run(); // start a new thread
+
+        /** define note **/
+        final int C3 = 50, D3 = 70, E3 = 90, F3 = 110, G3 = 130, A4 = 150, B4 = 170, C4 = 190;
+        int[] colorToNote = new int[191];
+        colorToNote[C3] = 60;
+        colorToNote[D3] = 62;
+        colorToNote[E3] = 64;
+        colorToNote[F3] = 65;
+        colorToNote[G3] = 67;
+        colorToNote[A4] = 69;
+        colorToNote[B4] = 71;
+        colorToNote[C4] = 72;
 
         /** img processing **/
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -195,7 +214,7 @@ public class PanelColorBased extends JPanel
 
             /** extract layout **/
 
-            capture.read(currBGRFrame);//todo provide more exposure
+            capture.read(currBGRFrame);
 
             /** capture de-noised image of layout - provide video and slider bar let user decide what's best **/
 
@@ -207,8 +226,19 @@ public class PanelColorBased extends JPanel
             Scalar contourColorGray = new Scalar(new double[]{50.0});
             ArrayList<MatOfPoint> filteredContours = new ArrayList<>(10);
             ContourPosComparator contourPosComparator = new ContourPosComparator();
+            Mat filteredContoursDisplay = null;
 
-            while (true) {
+            Condition learning_layout = new Condition(true);
+            // add action listener to confirmSlider
+            confirmSlider.setCondition(learning_layout);
+            confirmSlider.addActionListener(new ActionListener()
+            {
+                public void actionPerformed(ActionEvent e)
+                {
+                    confirmSlider.handle.setVal(false);
+                }
+            });
+            while (learning_layout.val) {
                 contourColorGray.val[0] = 50.0;
                 filteredContours.clear();
 
@@ -256,194 +286,158 @@ public class PanelColorBased extends JPanel
                         filteredContours.add(contour);
                 // sort contours left to right
                 Collections.sort(filteredContours, contourPosComparator);
-                // check if sorted
-                for (MatOfPoint contour : filteredContours) {
-                    Moments m = Imgproc.moments(contour);
-                    System.out.print((m.get_m10() / m.get_m00()) + " ");
-                }
-                System.out.println();
-                Mat filteredContoursDisplay = Mat.zeros(contoursToFind.size(), contoursToFind.type());
+                filteredContoursDisplay = Mat.zeros(contoursToFind.size(), contoursToFind.type());
                 for (int i = 0; i < filteredContours.size(); i++) {
                     Imgproc.drawContours(filteredContoursDisplay, filteredContours, i, contourColorGray, -1);
                     contourColorGray.val[0] += 20; // update color
                     if (contourColorGray.val[0] > 255)
                         contourColorGray.val[0] = 50.0;
-                }
+                } // C:50 D:70 E:90 F:110 G:130 A:150 B:170 C:190
                 currBuffImg = matToBufferedImage(filteredContoursDisplay);
                 camPanelColorBased.setimage(currBuffImg);
                 camPanelColorBased.repaint();
             }
 
+            /**************************************************************************************************
+             * Now, done learning layout **********************************************************************
+             **************************************************************************************************/
 
+            /** learn what to track **/
+            camPanelColorBased.stage = camPanelColorBased.LEARN_COLOR;
+            Point sampleBoxUL = new Point(30, 30);
+            Point sampleBoxLR = new Point(sampleBoxUL.x + 2 * camPanelColorBased.selectBoxLen,
+                    sampleBoxUL.y + 2 * camPanelColorBased.selectBoxLen);
+            while (camPanelColorBased.selecting) {
+                capture.read(currBGRFrame);
+                Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
+                Core.rectangle(currBGRFrame, sampleBoxUL, sampleBoxLR, green);
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
+            }
 
+            Thread.sleep(1000);
 
+            /** compute roi HSV ranges **/
+            roi = currBGRFrame.submat((int) camPanelColorBased.mouseUL.y + 2, (int) camPanelColorBased.mouseLR.y - 2,
+                    (int) camPanelColorBased.mouseUL.x + 2, (int) camPanelColorBased.mouseLR.x - 2);
+            Imgproc.cvtColor(roi, roi, Imgproc.COLOR_BGR2HSV);
 
+            MatOfDouble mean = new MatOfDouble(); // h s v
+            MatOfDouble stddev = new MatOfDouble(); // h s v
+            Core.meanStdDev(roi, mean, stddev);
 
+            // for readability
+            double meanHue = mean.get(0, 0)[0], stddevHue = stddev.get(0, 0)[0];
+            double meanSat = mean.get(1, 0)[0], stddevSat = stddev.get(1, 0)[0];
+            double meanVal = mean.get(2, 0)[0], stddevVal = stddev.get(2, 0)[0];
 
+            double minHue = meanHue - 3 * stddevHue;
+            double maxHue = meanHue + 3 * stddevHue;
 
+            double minSat = meanSat - 3 * stddevSat;
+            double maxSat = meanSat + 3 * stddevSat;
 
+            double minVal = meanVal - 3 * stddevVal;
+            double maxVal = meanVal + 3 * stddevVal;
 
+            if (minHue < 0)
+                minHue = 0.0;
+            if (maxHue < 0)
+                maxHue = 0.0;
+            if (minSat < 0)
+                minSat = 0.0;
+            if (maxSat < 0)
+                maxSat = 0.0;
+            if (minVal < 0)
+                minVal = 0.0;
+            if (maxVal < 0)
+                maxVal = 0;
 
+            System.out.printf("minHue: %f   maxHue: %f\nminSat: %f   maxSat: %f\nminVal: %f   maxVal: %f\n",
+                    minHue, maxHue, minSat, maxSat, minVal, maxVal);
 
+            Scalar low = new Scalar(minHue, minSat, minVal);
+            Scalar high = new Scalar(maxHue, maxSat, maxVal);
 
+            /** tracking **/
+            Size erodeSize = new Size(2, 2);
+            Size dilateSize = new Size(1, 1);
 
+            double dM01, dM10, dM00;
+            Point currCentroid = new Point(0, 0);
+            Point lastCentroid = new Point(0, 0);
 
+            double direction = 0; // direction the mallet moves
+            Point hitIndicator = new Point(20, 20);
+            final int ZERO_VAL = 5;
+            int zeroCounter = ZERO_VAL;
 
+            while (true) {
+                capture.read(currBGRFrame);
+                Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
 
+                /** thresholding HSV img **/
+                Core.inRange(currHSVFrame, low, high, currHSVFrame);
 
+                /** remove noise **/
+                Imgproc.erode(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
+                Imgproc.dilate(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
 
+                /** compute centroid **/
+                Moments moments = Imgproc.moments(currHSVFrame);
+                dM01 = moments.get_m01();
+                dM10 = moments.get_m10();
+                dM00 = moments.get_m00();
+                currCentroid.x = dM10 / dM00;
+                currCentroid.y = dM01 / dM00;
 
+                /** stabilize centroid **/
+                if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
+                        (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
+                        < 30) {
+                    currCentroid.x = lastCentroid.x; // just jittering, ignore
+                    currCentroid.y = lastCentroid.y;
+                }
 
+                /** show centroid **/
+                Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
+                Core.circle(currHSVFrame, currCentroid, 5, green, -1);
 
+                /** hit detection **/
+                if (currCentroid.y - lastCentroid.y > 0) { // keeps going down
+                    zeroCounter = ZERO_VAL;
+                    direction = currCentroid.y - lastCentroid.y;
+                } else if (currCentroid.y - lastCentroid.y <= 0 && direction > 0) { // switching direction to up
+                    midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x))[0]]);
+                    if (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x)[0] == 0)
+                        Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
+                    direction = currCentroid.y - lastCentroid.y;
+                    zeroCounter = ZERO_VAL;
+                } else if (currCentroid.y - lastCentroid.y == 0) {
+                    if (zeroCounter != 0) { // if next time it goes up, there is still chance to sound
+                        zeroCounter--;
+                    } else {
+                        direction = 0;
+                    }
+                }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
-//
-//            /** learn what to track **/
-//            camPanelColorBased.stage = camPanelColorBased.LEARN_COLOR;
-//            Point sampleBoxUL = new Point(30, 30);
-//            Point sampleBoxLR = new Point(sampleBoxUL.x + 2 * camPanelColorBased.selectBoxLen,
-//                    sampleBoxUL.y + 2 * camPanelColorBased.selectBoxLen);
-//            while (camPanelColorBased.selecting) {
-//                capture.read(currBGRFrame);
-//                Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
-//                Core.rectangle(currBGRFrame, sampleBoxUL, sampleBoxLR, green);
-//                currBuffImg = matToBufferedImage(currBGRFrame);
-//                camPanelColorBased.setimage(currBuffImg);
-//                camPanelColorBased.repaint();
-//            }
-//
-//            Thread.sleep(1000);
-//
-//            /** compute roi HSV ranges **/
-//            roi = currBGRFrame.submat((int) camPanelColorBased.mouseUL.y + 2, (int) camPanelColorBased.mouseLR.y - 2,
-//                    (int) camPanelColorBased.mouseUL.x + 2, (int) camPanelColorBased.mouseLR.x - 2);
-//            Imgproc.cvtColor(roi, roi, Imgproc.COLOR_BGR2HSV);
-//
-//            MatOfDouble mean = new MatOfDouble(); // h s v
-//            MatOfDouble stddev = new MatOfDouble(); // h s v
-//            Core.meanStdDev(roi, mean, stddev);
-//
-//            // for readability
-//            double meanHue = mean.get(0, 0)[0], stddevHue = stddev.get(0, 0)[0];
-//            double meanSat = mean.get(1, 0)[0], stddevSat = stddev.get(1, 0)[0];
-//            double meanVal = mean.get(2, 0)[0], stddevVal = stddev.get(2, 0)[0];
-//
-//            double minHue = meanHue - 3 * stddevHue;
-//            double maxHue = meanHue + 3 * stddevHue;
-//
-//            double minSat = meanSat - 3 * stddevSat;
-//            double maxSat = meanSat + 3 * stddevSat;
-//
-//            double minVal = meanVal - 3 * stddevVal;
-//            double maxVal = meanVal + 3 * stddevVal;
-//
-//            System.out.printf("minHue: %f   maxHue: %f\nminSat: %f   maxSat: %f\nminVal: %f   maxVal: %f\n",
-//                    minHue, maxHue, minSat, maxSat, minVal, maxVal);
-//
-//            Scalar low = new Scalar(minHue, minSat, minVal);
-//            Scalar high = new Scalar(maxHue, maxSat, maxVal);
-//
-//            /** tracking **/
-//            Size erodeSize = new Size(2, 2);
-//            Size dilateSize = new Size(1, 1);
-//
-//            double dM01, dM10, dM00;
-//            Point currCentroid = new Point(0, 0);
-//            Point lastCentroid = new Point(0, 0);
-//
-//            double direction = 0; // direction the mallet moves
-//            Point hitIndicator = new Point(20, 20);
-//            final int ZERO_VAL = 5;
-//            int zeroCounter = ZERO_VAL;
-//            while (true) {
-//                capture.read(currBGRFrame);
-//                Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
-//
-//                /** thresholding HSV img **/
-//                Core.inRange(currHSVFrame, low, high, currHSVFrame);
-//
-//                /** remove noise **/
-//                Imgproc.erode(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
-//                Imgproc.dilate(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
-//
-//                /** compute centroid **/
-//                Moments moments = Imgproc.moments(currHSVFrame);
-//                dM01 = moments.get_m01();
-//                dM10 = moments.get_m10();
-//                dM00 = moments.get_m00();
-//                currCentroid.x = dM10 / dM00;
-//                currCentroid.y = dM01 / dM00;
-//
-//                /** stabilize centroid **/
-//                if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
-//                        (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
-//                        < 30) {
-//                    currCentroid.x = lastCentroid.x; // just jittering, ignore
-//                    currCentroid.y = lastCentroid.y;
-//                }
-//
-//                /** show centroid **/
-//                Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
-//                Core.circle(currHSVFrame, currCentroid, 5, green, -1);
-//
-//                /** hit detection **/
-//                if (currCentroid.y - lastCentroid.y > 0) { // keeps going down
-//                    zeroCounter = ZERO_VAL;
-//                    direction = currCentroid.y - lastCentroid.y;
-//                } else if (currCentroid.y - lastCentroid.y <= 0 && direction > 0) { // switching direction to up
-//                    midi.sound((int) (currCentroid.x / 360.0 * 77 + 50));
-//                    Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
-//                    direction = currCentroid.y - lastCentroid.y;
-//                    zeroCounter = ZERO_VAL;
-//                } else if (currCentroid.y - lastCentroid.y == 0) {
-//                    if (zeroCounter != 0) { // if next time it goes up, there is still chance to sound
-//                        zeroCounter--;
-//                    } else {
-//                        direction = 0;
-//                    }
-//                }
-//
 //                System.out.println(direction);
-//
-//                /** update left canvas **/
-//                currBuffImg = matToBufferedImage(currBGRFrame);
-//                camPanelColorBased.setimage(currBuffImg);
-//                camPanelColorBased.repaint();
-//
-//                /** update right canvas **/
-//                currBuffImg = matToBufferedImage(currHSVFrame);
-//                binaryPanelColorBased.setimage(currBuffImg);
-//                binaryPanelColorBased.repaint();
-//
-//                /** update last centroid **/
-//                lastCentroid.x = currCentroid.x;
-//                lastCentroid.y = currCentroid.y;
-//            }
+
+                /** update left canvas **/
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camPanelColorBased.setimage(currBuffImg);
+                camPanelColorBased.repaint();
+
+                /** update right canvas **/
+                currBuffImg = matToBufferedImage(currHSVFrame);
+                binaryPanelColorBased.setimage(currBuffImg);
+                binaryPanelColorBased.repaint();
+
+                /** update last centroid **/
+                lastCentroid.x = currCentroid.x;
+                lastCentroid.y = currCentroid.y;
+            }
         }
     }
 }
