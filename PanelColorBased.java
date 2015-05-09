@@ -10,6 +10,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 
 public class PanelColorBased extends JPanel
 {
@@ -120,7 +121,7 @@ public class PanelColorBased extends JPanel
         JSlider slider = new JSlider(0, 255, 50); // min, max, default
         mainPanelColorBased.add(slider);
         GUIframe.setVisible(true);
-        GUIframe.setSize(800, 280);
+        GUIframe.setSize(1200, 280);
 
         /** set up MIDI **/
         MIDI midi = new MIDI();
@@ -205,7 +206,11 @@ public class PanelColorBased extends JPanel
             Mat contoursToFind = new Mat(); // store img to be found contours
             Mat hierarchy = new Mat();
 
+            Scalar contourColorGray = new Scalar(new double[]{50.0});
+            ArrayList<MatOfPoint> filteredContours = new ArrayList<>(10);
+
             while (true) {
+                contourColorGray.val[0] = 50.0;
 
                 /** De-noise BEGIN **/
                 // visualization: left = sum of right / # of right
@@ -222,9 +227,6 @@ public class PanelColorBased extends JPanel
                         cnt++;
                     } else {
                         Core.convertScaleAbs(sum, left, 1.0/20, 0.0);
-                        currBuffImg = matToBufferedImage(left);
-                        camPanelColorBased.setimage(currBuffImg);
-                        camPanelColorBased.repaint();
                         break;
                     }
                 }
@@ -248,8 +250,20 @@ public class PanelColorBased extends JPanel
                 binaryPanelColorBased.setimage(currBuffImg);
                 binaryPanelColorBased.repaint();
 
-                // update GUI
-                currBuffImg = matToBufferedImage(contoursToFind);
+                // update GUI, draw filtered contours on it
+                for (MatOfPoint contour : contours) {
+                    if (Imgproc.contourArea(contour) > 400.0) { // filter out noise
+                        filteredContours.add(contour);
+                    }
+                }
+                Mat filteredContoursDisplay = Mat.zeros(contoursToFind.size(), contoursToFind.type());
+                for (int i = 0; i < filteredContours.size(); i++) {
+                    Imgproc.drawContours(filteredContoursDisplay, filteredContours, i, contourColorGray, -1);
+                    contourColorGray.val[0] += 20; // update color
+                    if (contourColorGray.val[0] > 255)
+                        contourColorGray.val[0] = 50.0;
+                }
+                currBuffImg = matToBufferedImage(filteredContoursDisplay);
                 camPanelColorBased.setimage(currBuffImg);
                 camPanelColorBased.repaint();
             }
