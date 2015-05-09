@@ -8,9 +8,7 @@ import org.opencv.imgproc.Moments;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.*;
 
 public class PanelColorBased extends JPanel
 {
@@ -208,9 +206,11 @@ public class PanelColorBased extends JPanel
 
             Scalar contourColorGray = new Scalar(new double[]{50.0});
             ArrayList<MatOfPoint> filteredContours = new ArrayList<>(10);
+            ContourPosComparator contourPosComparator = new ContourPosComparator();
 
             while (true) {
                 contourColorGray.val[0] = 50.0;
+                filteredContours.clear();
 
                 /** De-noise BEGIN **/
                 // visualization: left = sum of right / # of right
@@ -251,11 +251,17 @@ public class PanelColorBased extends JPanel
                 binaryPanelColorBased.repaint();
 
                 // update GUI, draw filtered contours on it
-                for (MatOfPoint contour : contours) {
-                    if (Imgproc.contourArea(contour) > 400.0) { // filter out noise
+                for (MatOfPoint contour : contours)
+                    if (Imgproc.contourArea(contour) > 400.0) // filter out noise
                         filteredContours.add(contour);
-                    }
+                // sort contours left to right
+                Collections.sort(filteredContours, contourPosComparator);
+                // check if sorted
+                for (MatOfPoint contour : filteredContours) {
+                    Moments m = Imgproc.moments(contour);
+                    System.out.print((m.get_m10() / m.get_m00()) + " ");
                 }
+                System.out.println();
                 Mat filteredContoursDisplay = Mat.zeros(contoursToFind.size(), contoursToFind.type());
                 for (int i = 0; i < filteredContours.size(); i++) {
                     Imgproc.drawContours(filteredContoursDisplay, filteredContours, i, contourColorGray, -1);
