@@ -322,6 +322,10 @@ public class PanelColorBased extends JPanel
             Point hitIndicator = new Point(20, 20);
             final int ZERO_VAL = 5;
             int zeroCounter = ZERO_VAL;
+            int keyColorVal = 0;
+            int row = 0, col = 0;
+            int R = (int) filteredContoursDisplay.size().height, C = (int) filteredContoursDisplay.size().width;
+            double[] RBGWhite = new double[]{255.0, 255.0, 255.0};
 
             while (true) {
                 capture.read(currBGRFrame);
@@ -366,6 +370,13 @@ public class PanelColorBased extends JPanel
                         Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                     direction = currCentroid.y - lastCentroid.y;
                     zeroCounter = ZERO_VAL;
+                    // highlight on note
+                    keyColorVal = (int) (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x))[0];
+                    for (row = 0; row < R; row++)
+                        for (col = 0; col < C; col++) {
+                            if (currHSVFrame.get(row, col)[0] == keyColorVal)
+                                currHSVFrame.put(row, col, RBGWhite);
+                        }
                 } else if (currCentroid.y - lastCentroid.y == 0) {
                     if (zeroCounter != 0) { // if next time it goes up, there is still chance to sound
                         zeroCounter--;
