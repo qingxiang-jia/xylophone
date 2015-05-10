@@ -464,8 +464,10 @@ public class PanelColorBased extends JPanel
                 lastCentroid1.x = currCentroid1.x;
                 lastCentroid1.y = currCentroid1.y;
 
-                lastCentroid1.x = currCentroid2.x;
-                lastCentroid2.y = currCentroid2.y;
+                if (lowHigh2 != null) {
+                    lastCentroid2.x = currCentroid2.x;
+                    lastCentroid2.y = currCentroid2.y;
+                }
             }
         }
     }
