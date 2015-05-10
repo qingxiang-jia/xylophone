@@ -161,6 +161,8 @@ public class PanelColorBased extends JPanel
 
         Mat currBGRFrame = new Mat();
         Mat currHSVFrame = new Mat();
+        Mat frame1 = new Mat();
+        Mat frame2 = new Mat();
 
         Mat roi;
 
@@ -306,23 +308,37 @@ public class PanelColorBased extends JPanel
              * Now, done learning layout **********************************************************************
              **************************************************************************************************/
 
-            double[][] lowHigh = (double[][]) FileIO.deserialize("lof_orange");
-            Scalar low = new Scalar(lowHigh[0]);
-            Scalar high = new Scalar(lowHigh[1]);
+            double[][] lowHigh1 = (double[][]) FileIO.deserialize("lof_orange");
+            double[][] lowHigh2 = (double[][]) FileIO.deserialize("lof_red"); // enables snd mallet
+//            double[][] lowHigh2 = null;
+            Scalar low1 = new Scalar(lowHigh1[0]);
+            Scalar high1 = new Scalar(lowHigh1[1]);
+            Scalar low2 = null;
+            Scalar high2 = null;
+            if (lowHigh2 != null) {
+                low2 = new Scalar(lowHigh2[0]);
+                high2 = new Scalar(lowHigh2[1]);
+            }
 
             /** tracking **/
             Size erodeSize = new Size(2, 2);
             Size dilateSize = new Size(1, 1);
 
-            double dM01, dM10, dM00;
-            Point currCentroid = new Point(0, 0);
-            Point lastCentroid = new Point(0, 0);
+            Point currCentroid1 = new Point(0, 0);
+            Point lastCentroid1 = new Point(0, 0);
+            Point currCentroid2 = null;
+            Point lastCentroid2 = null;
+            if (lowHigh2 != null) {
+                currCentroid2 = new Point(0, 0);
+                lastCentroid2 = new Point(0, 0);
+            }
 
-            double direction = 0; // direction the mallet moves
+            double direction1 = 0; // direction the mallet moves
+            double direction2 = 0;
             Point hitIndicator = new Point(20, 20);
             final int ZERO_VAL = 5;
-            int zeroCounter = ZERO_VAL;
-            int keyColorVal = 0;
+            int zeroCounter1 = ZERO_VAL, zeroCounter2 = ZERO_VAL;
+            int keyColorVal1 = 0, keyColorVal2 = 0;
             int row = 0, col = 0;
             int R = (int) filteredContoursDisplay.size().height, C = (int) filteredContoursDisplay.size().width;
             double[] RBGWhite = new double[]{255.0, 255.0, 255.0};
@@ -331,61 +347,108 @@ public class PanelColorBased extends JPanel
                 capture.read(currBGRFrame);
                 Core.flip(currBGRFrame, currBGRFrame, 1);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
+                currHSVFrame.copyTo(frame1);
+                if (lowHigh2 != null)
+                    currHSVFrame.copyTo(frame2);
 
                 /** thresholding HSV img **/
-                Core.inRange(currHSVFrame, low, high, currHSVFrame);
+                Core.inRange(frame1, low1, high1, frame1);
+                if (lowHigh2 != null)
+                    Core.inRange(frame2, low2, high2, frame2);
 
                 /** remove noise **/
-                Imgproc.erode(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
-                Imgproc.dilate(currHSVFrame, currHSVFrame, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
+                Imgproc.erode(frame1, frame1, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
+                Imgproc.dilate(frame1, frame1, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
+
+                if (lowHigh2 != null) {
+                    Imgproc.erode(frame2, frame2, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
+                    Imgproc.dilate(frame2, frame2, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
+                }
 
                 /** compute centroid **/
-                Moments moments = Imgproc.moments(currHSVFrame);
-                dM01 = moments.get_m01();
-                dM10 = moments.get_m10();
-                dM00 = moments.get_m00();
-                currCentroid.x = dM10 / dM00;
-                currCentroid.y = dM01 / dM00;
+                Moments moments1 = Imgproc.moments(frame1);
+                currCentroid1.x = moments1.get_m10() / moments1.get_m00();
+                currCentroid1.y = moments1.get_m01() / moments1.get_m00();
+
+                if (lowHigh2 != null) {
+                    Moments moments2 = Imgproc.moments(frame2);
+                    currCentroid2.x = moments2.get_m10() / moments2.get_m00();
+                    currCentroid2.y = moments2.get_m01() / moments2.get_m00();
+                }
 
                 /** stabilize centroid **/
-                if ((currCentroid.x - lastCentroid.x) * (currCentroid.x - lastCentroid.x) +
-                        (currCentroid.y - lastCentroid.y) * (currCentroid.y - lastCentroid.y)
+                if ((currCentroid1.x - lastCentroid1.x) * (currCentroid1.x - lastCentroid1.x) +
+                        (currCentroid1.y - lastCentroid1.y) * (currCentroid1.y - lastCentroid1.y)
                         < 30) {
-                    currCentroid.x = lastCentroid.x; // just jittering, ignore
-                    currCentroid.y = lastCentroid.y;
+                    currCentroid1.x = lastCentroid1.x; // just jittering, ignore
+                    currCentroid1.y = lastCentroid1.y;
+                }
+                if (lowHigh2 != null) {
+                    if ((currCentroid2.x - lastCentroid2.x) * (currCentroid2.x - lastCentroid2.x) +
+                            (currCentroid2.y - lastCentroid2.y) * (currCentroid2.y - lastCentroid2.y)
+                            < 30) {
+                        currCentroid2.x = lastCentroid2.x; // just jittering, ignore
+                        currCentroid2.y = lastCentroid2.y;
+                    }
                 }
 
                 /** show centroid **/
                 filteredContoursDisplay.copyTo(currHSVFrame);
                 Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
-                Core.circle(currHSVFrame, currCentroid, 5, green, -1);
+                Core.circle(currHSVFrame, currCentroid1, 5, green, -1);
+                if (lowHigh2 != null)
+                    Core.circle(currHSVFrame, currCentroid2, 5, blue, -1);
 
                 /** hit detection **/
-                if (currCentroid.y - lastCentroid.y > 0) { // keeps going down
-                    zeroCounter = ZERO_VAL;
-                    direction = currCentroid.y - lastCentroid.y;
-                } else if (currCentroid.y - lastCentroid.y <= 0 && direction > 0) { // switching direction to up
-                    midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x))[0]]);
-                    if (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x)[0] == 0)
+                if (currCentroid1.y - lastCentroid1.y > 0) { // keeps going down
+                    zeroCounter1 = ZERO_VAL;
+                    direction1 = currCentroid1.y - lastCentroid1.y;
+                } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0) { // switching direction to up
+                    midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
+                    if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
                         Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
-                    direction = currCentroid.y - lastCentroid.y;
-                    zeroCounter = ZERO_VAL;
-                    // highlight on note
-                    keyColorVal = (int) (filteredContoursDisplay.get((int) currCentroid.y, (int) currCentroid.x))[0];
+                    direction1 = currCentroid1.y - lastCentroid1.y;
+                    zeroCounter1 = ZERO_VAL;
+                    // highlight on hitting note
+                    keyColorVal1 = (int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0];
                     for (row = 0; row < R; row++)
                         for (col = 0; col < C; col++) {
-                            if (currHSVFrame.get(row, col)[0] == keyColorVal)
+                            if (currHSVFrame.get(row, col)[0] == keyColorVal1)
                                 currHSVFrame.put(row, col, RBGWhite);
                         }
-                } else if (currCentroid.y - lastCentroid.y == 0) {
-                    if (zeroCounter != 0) { // if next time it goes up, there is still chance to sound
-                        zeroCounter--;
+                } else if (currCentroid1.y - lastCentroid1.y == 0) {
+                    if (zeroCounter1 != 0) { // if next time it goes up, there is still chance to sound
+                        zeroCounter1--;
                     } else {
-                        direction = 0;
+                        direction1 = 0;
                     }
                 }
 
-//                System.out.println(direction);
+                if (lowHigh2 != null) {
+                    if (currCentroid2.y - lastCentroid2.y > 0) { // keeps going down
+                        zeroCounter2 = ZERO_VAL;
+                        direction2 = currCentroid2.y - lastCentroid2.y;
+                    } else if (currCentroid2.y - lastCentroid2.y <= 0 && direction2 > 0) { // switching direction to up
+                        midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
+                        if (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x)[0] == 0)
+                            Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
+                        direction2 = currCentroid2.y - lastCentroid2.y;
+                        zeroCounter2 = ZERO_VAL;
+                        // highlight on hitting note
+                        keyColorVal2 = (int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0];
+                        for (row = 0; row < R; row++)
+                            for (col = 0; col < C; col++) {
+                                if (currHSVFrame.get(row, col)[0] == keyColorVal2)
+                                    currHSVFrame.put(row, col, RBGWhite);
+                            }
+                    } else if (currCentroid2.y - lastCentroid2.y == 0) {
+                        if (zeroCounter2 != 0) { // if next time it goes up, there is still chance to sound
+                            zeroCounter2--;
+                        } else {
+                            direction2 = 0;
+                        }
+                    }
+                }
 
                 /** update left canvas **/
                 currBuffImg = matToBufferedImage(currBGRFrame);
@@ -398,8 +461,11 @@ public class PanelColorBased extends JPanel
                 binaryPanelColorBased.repaint();
 
                 /** update last centroid **/
-                lastCentroid.x = currCentroid.x;
-                lastCentroid.y = currCentroid.y;
+                lastCentroid1.x = currCentroid1.x;
+                lastCentroid1.y = currCentroid1.y;
+
+                lastCentroid1.x = currCentroid2.x;
+                lastCentroid2.y = currCentroid2.y;
             }
         }
     }
