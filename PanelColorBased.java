@@ -175,6 +175,7 @@ public class PanelColorBased extends JPanel
 
             while (camPanelColorBased.verticesLearned < 4) { // display the video so the user can select paper vertices
                 capture.read(currBGRFrame);
+                Core.flip(currBGRFrame, currBGRFrame, 1);
 
                 // update GUI
                 currBuffImg = matToBufferedImage(currBGRFrame);
@@ -215,6 +216,7 @@ public class PanelColorBased extends JPanel
             /** extract layout **/
 
             capture.read(currBGRFrame);
+            Core.flip(currBGRFrame, currBGRFrame, 1);
 
             /** capture de-noised image of layout - provide video and slider bar let user decide what's best **/
 
@@ -252,6 +254,8 @@ public class PanelColorBased extends JPanel
 
                 while (true) {
                     capture.read(right);
+                    Core.flip(right, right, 1);
+
                     if (cnt != 20) {
                         Imgproc.accumulate(right, sum);
                         cnt++;
@@ -321,6 +325,7 @@ public class PanelColorBased extends JPanel
 
             while (true) {
                 capture.read(currBGRFrame);
+                Core.flip(currBGRFrame, currBGRFrame, 1);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
 
                 /** thresholding HSV img **/
@@ -347,6 +352,7 @@ public class PanelColorBased extends JPanel
                 }
 
                 /** show centroid **/
+                filteredContoursDisplay.copyTo(currHSVFrame);
                 Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
                 Core.circle(currHSVFrame, currCentroid, 5, green, -1);
 
