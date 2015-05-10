@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.Arrays;
 
 /**
  * File related IO operations.
@@ -38,7 +39,7 @@ public class FileIO
         ObjectInputStream ois = null;
         try {
             fis = new FileInputStream(path);
-            ois = new ObjectInputStream(ois);
+            ois = new ObjectInputStream(fis);
             return ois.readObject();
         } catch (IOException | ClassNotFoundException e0) {
             e0.printStackTrace();

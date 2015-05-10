@@ -302,63 +302,9 @@ public class PanelColorBased extends JPanel
              * Now, done learning layout **********************************************************************
              **************************************************************************************************/
 
-            /** learn what to track **/
-            camPanelColorBased.stage = camPanelColorBased.LEARN_COLOR;
-            Point sampleBoxUL = new Point(30, 30);
-            Point sampleBoxLR = new Point(sampleBoxUL.x + 2 * camPanelColorBased.selectBoxLen,
-                    sampleBoxUL.y + 2 * camPanelColorBased.selectBoxLen);
-            while (camPanelColorBased.selecting) {
-                capture.read(currBGRFrame);
-                Core.rectangle(currBGRFrame, camPanelColorBased.mouseUL, camPanelColorBased.mouseLR, green);
-                Core.rectangle(currBGRFrame, sampleBoxUL, sampleBoxLR, green);
-                currBuffImg = matToBufferedImage(currBGRFrame);
-                camPanelColorBased.setimage(currBuffImg);
-                camPanelColorBased.repaint();
-            }
-
-            Thread.sleep(1000);
-
-            /** compute roi HSV ranges **/
-            roi = currBGRFrame.submat((int) camPanelColorBased.mouseUL.y + 2, (int) camPanelColorBased.mouseLR.y - 2,
-                    (int) camPanelColorBased.mouseUL.x + 2, (int) camPanelColorBased.mouseLR.x - 2);
-            Imgproc.cvtColor(roi, roi, Imgproc.COLOR_BGR2HSV);
-
-            MatOfDouble mean = new MatOfDouble(); // h s v
-            MatOfDouble stddev = new MatOfDouble(); // h s v
-            Core.meanStdDev(roi, mean, stddev);
-
-            // for readability
-            double meanHue = mean.get(0, 0)[0], stddevHue = stddev.get(0, 0)[0];
-            double meanSat = mean.get(1, 0)[0], stddevSat = stddev.get(1, 0)[0];
-            double meanVal = mean.get(2, 0)[0], stddevVal = stddev.get(2, 0)[0];
-
-            double minHue = meanHue - 3 * stddevHue;
-            double maxHue = meanHue + 3 * stddevHue;
-
-            double minSat = meanSat - 3 * stddevSat;
-            double maxSat = meanSat + 3 * stddevSat;
-
-            double minVal = meanVal - 3 * stddevVal;
-            double maxVal = meanVal + 3 * stddevVal;
-
-            if (minHue < 0)
-                minHue = 0.0;
-            if (maxHue < 0)
-                maxHue = 0.0;
-            if (minSat < 0)
-                minSat = 0.0;
-            if (maxSat < 0)
-                maxSat = 0.0;
-            if (minVal < 0)
-                minVal = 0.0;
-            if (maxVal < 0)
-                maxVal = 0;
-
-            System.out.printf("minHue: %f   maxHue: %f\nminSat: %f   maxSat: %f\nminVal: %f   maxVal: %f\n",
-                    minHue, maxHue, minSat, maxSat, minVal, maxVal);
-
-            Scalar low = new Scalar(minHue, minSat, minVal);
-            Scalar high = new Scalar(maxHue, maxSat, maxVal);
+            double[][] lowHigh = (double[][]) FileIO.deserialize("lof_orange");
+            Scalar low = new Scalar(lowHigh[0]);
+            Scalar high = new Scalar(lowHigh[1]);
 
             /** tracking **/
             Size erodeSize = new Size(2, 2);
