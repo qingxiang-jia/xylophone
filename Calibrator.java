@@ -6,13 +6,15 @@ import org.opencv.imgproc.Moments;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 /**
  * Stick learning is separated out from the normal procedure.
  * Helps user to find the best thresholds to capture the stick, and right the data to file.
  */
-public class Caliberator
+public class Calibrator
 {
     public static void main(String arg[]) throws Exception
     {
@@ -49,37 +51,43 @@ public class Caliberator
         lowHue.setMajorTickSpacing(30);
         lowHue.setPaintTicks(true);
         lowHue.setPaintLabels(true);
-        lowHue.addChangeListener(new SlideListener(lowHVal));
+        SlideListener lowHListener = new SlideListener(lowHVal);
+        lowHue.addChangeListener(lowHListener);
 
         lowSat.setMinorTickSpacing(50);
         lowSat.setMajorTickSpacing(50);
         lowSat.setPaintTicks(true);
         lowSat.setPaintLabels(true);
-        lowSat.addChangeListener(new SlideListener(lowSVal));
+        SlideListener lowSListener = new SlideListener(lowSVal);
+        lowSat.addChangeListener(lowSListener);
 
         lowVal.setMinorTickSpacing(50);
         lowVal.setMajorTickSpacing(50);
         lowVal.setPaintTicks(true);
         lowVal.setPaintLabels(true);
-        lowVal.addChangeListener(new SlideListener(lowVVal));
+        SlideListener lowVListener = new SlideListener(lowVVal);
+        lowVal.addChangeListener(lowVListener);
 
         highHue.setMinorTickSpacing(30);
         highHue.setMajorTickSpacing(30);
         highHue.setPaintTicks(true);
         highHue.setPaintLabels(true);
-        highHue.addChangeListener(new SlideListener(highHVal));
+        SlideListener highHListener = new SlideListener(highHVal);
+        highHue.addChangeListener(highHListener);
 
         highSat.setMinorTickSpacing(50);
         highSat.setMajorTickSpacing(50);
         highSat.setPaintTicks(true);
         highSat.setPaintLabels(true);
-        highSat.addChangeListener(new SlideListener(highSVal));
+        SlideListener highSatSListener = new SlideListener(highSVal);
+        highSat.addChangeListener(highSatSListener);
 
         highVal.setMinorTickSpacing(50);
         highVal.setMajorTickSpacing(50);
         highVal.setPaintTicks(true);
         highVal.setPaintLabels(true);
-        highVal.addChangeListener(new SlideListener(highVVal));
+        SlideListener highVListener = new SlideListener(highVVal);
+        highVal.addChangeListener(highVListener);
 
         JLabel lowH = new JLabel("Low H");
         JLabel lowS = new JLabel("Low S");
@@ -114,8 +122,13 @@ public class Caliberator
         options.add(highVal);
         options.add(highVVal);
 
+        // button to save calibration results
+        JButton saveBtn = new JButton("Save");
+        SaveBtnListener saveBtnListener = new SaveBtnListener();
+        saveBtn.addActionListener(saveBtnListener);
 
         mainPanelColorBased.add(options);
+        mainPanelColorBased.add(saveBtn);
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 1300);
 
@@ -133,7 +146,7 @@ public class Caliberator
 
         BufferedImage currBuffImg;
 
-        VideoCapture capture = new VideoCapture(1);
+        VideoCapture capture = new VideoCapture(1); // I have two cam, use the snd one
 
         Mat currBGRFrame = new Mat();
         Mat currHSVFrame = new Mat();
@@ -177,44 +190,56 @@ public class Caliberator
                 double meanSat = mean.get(1, 0)[0], stddevSat = stddev.get(1, 0)[0];
                 double meanVal = mean.get(2, 0)[0], stddevVal = stddev.get(2, 0)[0];
 
-                double minHue = meanHue - 3 * stddevHue;
-                double maxHue = meanHue + 3 * stddevHue;
+                int minHue = (int) (meanHue - 3 * stddevHue);
+                int maxHue = (int) (meanHue + 3 * stddevHue);
 
-                double minSat = meanSat - 3 * stddevSat;
-                double maxSat = meanSat + 3 * stddevSat;
+                int minSat = (int) (meanSat - 3 * stddevSat);
+                int maxSat = (int) (meanSat + 3 * stddevSat);
 
-                double minVal = meanVal - 3 * stddevVal;
-                double maxVal = meanVal + 3 * stddevVal;
+                int minVal = (int) (meanVal - 3 * stddevVal);
+                int maxVal = (int) (meanVal + 3 * stddevVal);
 
                 // disallow negative values
                 if (minHue < 0)
-                    minHue = 0.0;
+                    minHue = 0;
                 if (maxHue < 0)
-                    maxHue = 0.0;
+                    maxHue = 0;
                 if (minSat < 0)
-                    minSat = 0.0;
+                    minSat = 0;
                 if (maxSat < 0)
-                    maxSat = 0.0;
+                    maxSat = 0;
                 if (minVal < 0)
-                    minVal = 0.0;
+                    minVal = 0;
                 if (maxVal < 0)
                     maxVal = 0;
 
-                System.out.printf("minHue: %f   maxHue: %f\nminSat: %f   maxSat: %f\nminVal: %f   maxVal: %f\n",
+                System.out.printf("minHue: %d   maxHue: %d\nminSat: %d   maxSat: %d\nminVal: %d   maxVal: %d\n",
                         minHue, maxHue, minSat, maxSat, minVal, maxVal);
 
                 // update slider bars
-                lowHue.setValue((int) minHue);
-                lowSat.setValue((int) minSat);
-                lowVal.setValue((int) minVal);
-                highHue.setValue((int) maxHue);
-                highSat.setValue((int) maxSat);
-                highVal.setValue((int) maxVal);
+                lowHue.setValue(minHue);
+                lowSat.setValue(minSat);
+                lowVal.setValue(minVal);
+                highHue.setValue(maxHue);
+                highSat.setValue(maxSat);
+                highVal.setValue(maxVal);
                 options.validate();
                 options.repaint();
 
                 Scalar low = new Scalar(minHue, minSat, minVal);
                 Scalar high = new Scalar(maxHue, maxSat, maxVal);
+
+                // update slider bar listeners
+                lowHListener.setBound(low, 0);
+                lowSListener.setBound(low, 1);
+                lowVListener.setBound(low, 2);
+
+                highHListener.setBound(high, 0);
+                highHListener.setBound(high, 1);
+                highHListener.setBound(high, 2);
+
+                // update saveBtnListener
+                saveBtnListener.setBounds(low, high);
 
                 /** tracking **/
                 Size erodeSize = new Size(2, 2);
