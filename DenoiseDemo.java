@@ -15,14 +15,14 @@ public class DenoiseDemo
         JFrame GUIframe = new JFrame("BasicPanel");
         GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         GUIframe.setSize(400, 400);
-        PanelColorBased mainPanelMotionBased = new PanelColorBased();
+        ColorTrackerSym mainPanelMotionBased = new ColorTrackerSym();
         GUIframe.setContentPane(mainPanelMotionBased);
         GridLayout layout = new GridLayout(0, 2);
         mainPanelMotionBased.setLayout(layout);
-        PanelColorBased camPanelColorBased = new PanelColorBased();
-        PanelColorBased binaryPanelColorBased = new PanelColorBased();
-        mainPanelMotionBased.add(camPanelColorBased);
-        mainPanelMotionBased.add(binaryPanelColorBased);
+        ColorTrackerSym camColorTrackerSym = new ColorTrackerSym();
+        ColorTrackerSym binaryColorTrackerSym = new ColorTrackerSym();
+        mainPanelMotionBased.add(camColorTrackerSym);
+        mainPanelMotionBased.add(binaryColorTrackerSym);
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 280);
 
@@ -41,9 +41,9 @@ public class DenoiseDemo
 
         VideoCapture capture = new VideoCapture(1);
 
-        PanelMouseAdapter mouseAdapter = new PanelMouseAdapter();
-        mouseAdapter.attach(camPanelColorBased);
-        camPanelColorBased.addMouseListener(mouseAdapter);
+        SymMouseAdapter mouseAdapter = new SymMouseAdapter();
+        mouseAdapter.attach(camColorTrackerSym);
+        camColorTrackerSym.addMouseListener(mouseAdapter);
 
         Mat currBGRFrame = new Mat();
         Mat currHSVFrame = new Mat();
@@ -68,18 +68,18 @@ public class DenoiseDemo
                 capture.read(right);
 
                 // update right
-                currBuffImg = PanelColorBased.matToBufferedImage(right);
-                binaryPanelColorBased.setimage(currBuffImg);
-                binaryPanelColorBased.repaint();
+                currBuffImg = ColorTrackerSym.matToBufferedImage(right);
+                binaryColorTrackerSym.setimage(currBuffImg);
+                binaryColorTrackerSym.repaint();
 
                 if (cnt != 20) {
                     Imgproc.accumulate(right, sum);
                     cnt++;
                 } else {
                     Core.convertScaleAbs(sum, left, 1.0 / 20, 0.0);
-                    currBuffImg = PanelColorBased.matToBufferedImage(left);
-                    camPanelColorBased.setimage(currBuffImg);
-                    camPanelColorBased.repaint();
+                    currBuffImg = ColorTrackerSym.matToBufferedImage(left);
+                    camColorTrackerSym.setimage(currBuffImg);
+                    camColorTrackerSym.repaint();
 
                     cnt = 0;
                     sum = Mat.zeros(frameSize, CvType.CV_32FC3);

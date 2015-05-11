@@ -6,8 +6,6 @@ import org.opencv.imgproc.Moments;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 
 /**
@@ -21,14 +19,14 @@ public class Calibrator
         /** GUI set up **/
         JFrame GUIframe = new JFrame("BasicPanel");
         GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        PanelColorBased mainPanelColorBased = new PanelColorBased();
-        GUIframe.setContentPane(mainPanelColorBased);
+        ColorTrackerSym mainColorTrackerSym = new ColorTrackerSym();
+        GUIframe.setContentPane(mainColorTrackerSym);
         GridLayout layout = new GridLayout(2, 2);
-        mainPanelColorBased.setLayout(layout);
-        PanelColorBased leftPanel = new PanelColorBased();
-        PanelColorBased rightPanel = new PanelColorBased();
-        mainPanelColorBased.add(leftPanel);
-        mainPanelColorBased.add(rightPanel);
+        mainColorTrackerSym.setLayout(layout);
+        ColorTrackerSym leftPanel = new ColorTrackerSym();
+        ColorTrackerSym rightPanel = new ColorTrackerSym();
+        mainColorTrackerSym.add(leftPanel);
+        mainColorTrackerSym.add(rightPanel);
         JPanel options = new JPanel();
 
         // set up option panel
@@ -127,13 +125,13 @@ public class Calibrator
         SaveBtnListener saveBtnListener = new SaveBtnListener();
         saveBtn.addActionListener(saveBtnListener);
 
-        mainPanelColorBased.add(options);
-        mainPanelColorBased.add(saveBtn);
+        mainColorTrackerSym.add(options);
+        mainColorTrackerSym.add(saveBtn);
         GUIframe.setVisible(true);
         GUIframe.setSize(800, 1300);
 
         // mouse listener
-        PanelMouseAdapter mouseAdapter = new PanelMouseAdapter();
+        SymMouseAdapter mouseAdapter = new SymMouseAdapter();
         mouseAdapter.attach(leftPanel);
         leftPanel.addMouseListener(mouseAdapter);
 
@@ -169,7 +167,7 @@ public class Calibrator
                     capture.read(currBGRFrame);
                     Core.rectangle(currBGRFrame, leftPanel.mouseUL, leftPanel.mouseLR, green);
                     Core.rectangle(currBGRFrame, sampleBoxUL, sampleBoxLR, green);
-                    currBuffImg = PanelColorBased.matToBufferedImage(currBGRFrame);
+                    currBuffImg = ColorTrackerSym.matToBufferedImage(currBGRFrame);
                     leftPanel.setimage(currBuffImg);
                     leftPanel.repaint();
                 }
@@ -302,12 +300,12 @@ public class Calibrator
                     }
 
                     /** update left canvas **/
-                    currBuffImg = PanelColorBased.matToBufferedImage(currBGRFrame);
+                    currBuffImg = ColorTrackerSym.matToBufferedImage(currBGRFrame);
                     leftPanel.setimage(currBuffImg);
                     leftPanel.repaint();
 
                     /** update right canvas **/
-                    currBuffImg = PanelColorBased.matToBufferedImage(currHSVFrame);
+                    currBuffImg = ColorTrackerSym.matToBufferedImage(currHSVFrame);
                     rightPanel.setimage(currBuffImg);
                     rightPanel.repaint();
 

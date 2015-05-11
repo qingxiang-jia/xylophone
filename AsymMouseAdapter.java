@@ -6,9 +6,9 @@ import java.awt.event.MouseEvent;
 /**
  * Captures mouseUL coordinates with respect to the attached panel.
  */
-public class PanelMouseAdapter extends MouseAdapter
+public class AsymMouseAdapter extends MouseAdapter
 {
-    PanelColorBased master;
+    ColorTrackerAsym master;
 
     @Override
     public void mouseClicked(MouseEvent e) // simple DFA
@@ -52,8 +52,8 @@ public class PanelMouseAdapter extends MouseAdapter
         if (master.mouseLR.y > maxHeight) master.mouseLR.y = maxHeight - 1;
     }
 
-    public void attach(PanelColorBased panelColorBased)
+    public void attach(ColorTrackerAsym colorTrackerAsym)
     {
-        master = panelColorBased;
+        master = colorTrackerAsym;
     }
 }

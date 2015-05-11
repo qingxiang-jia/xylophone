@@ -12,7 +12,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.*;
 
-public class PanelColorBased extends JPanel
+public class ColorTrackerSym extends JPanel
 {
     public Point mouseUL;
     public Point mouseLR;
@@ -29,7 +29,7 @@ public class PanelColorBased extends JPanel
     public Point[] vertices;
 
     // Create a constructor method
-    public PanelColorBased()
+    public ColorTrackerSym()
     {
         super();
         mouseUL = new Point(0, 0);
@@ -110,14 +110,14 @@ public class PanelColorBased extends JPanel
         JFrame GUIframe = new JFrame("BasicPanel");
         GUIframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         GUIframe.setSize(400, 400);
-        PanelColorBased mainPanelColorBased = new PanelColorBased();
-        GUIframe.setContentPane(mainPanelColorBased);
+        ColorTrackerSym mainColorTrackerSym = new ColorTrackerSym();
+        GUIframe.setContentPane(mainColorTrackerSym);
         GridLayout layout = new GridLayout(0, 3);
-        mainPanelColorBased.setLayout(layout);
-        PanelColorBased camPanelColorBased = new PanelColorBased();
-        PanelColorBased binaryPanelColorBased = new PanelColorBased();
-        mainPanelColorBased.add(camPanelColorBased);
-        mainPanelColorBased.add(binaryPanelColorBased);
+        mainColorTrackerSym.setLayout(layout);
+        ColorTrackerSym camColorTrackerSym = new ColorTrackerSym();
+        ColorTrackerSym binaryColorTrackerSym = new ColorTrackerSym();
+        mainColorTrackerSym.add(camColorTrackerSym);
+        mainColorTrackerSym.add(binaryColorTrackerSym);
         JPanel options = new JPanel();
         JSlider slider = new JSlider(0, 255, 50); // min, max, default
         options.add(slider);
@@ -128,7 +128,7 @@ public class PanelColorBased extends JPanel
         JComboBox layoutList = new JComboBox<>(layoutLst);
         layoutList.setSelectedIndex(0);
         options.add(layoutList);
-        mainPanelColorBased.add(options);
+        mainColorTrackerSym.add(options);
         GUIframe.setVisible(true);
         GUIframe.setSize(1200, 280);
 
@@ -165,9 +165,9 @@ public class PanelColorBased extends JPanel
 
         VideoCapture capture = new VideoCapture(1);
 
-        PanelMouseAdapter mouseAdapter = new PanelMouseAdapter();
-        mouseAdapter.attach(camPanelColorBased);
-        camPanelColorBased.addMouseListener(mouseAdapter);
+        SymMouseAdapter mouseAdapter = new SymMouseAdapter();
+        mouseAdapter.attach(camColorTrackerSym);
+        camColorTrackerSym.addMouseListener(mouseAdapter);
 
         Mat currBGRFrame = new Mat();
         Mat currHSVFrame = new Mat();
@@ -183,16 +183,16 @@ public class PanelColorBased extends JPanel
             Size frameSize = new Size(360, 240);
 
             /** learn the xylophone layout (for now, CDEFGABC) **/
-            camPanelColorBased.stage = camPanelColorBased.LEARN_LAYOUT; // specify stage
+            camColorTrackerSym.stage = camColorTrackerSym.LEARN_LAYOUT; // specify stage
 
-            while (camPanelColorBased.verticesLearned < 4) { // display the video so the user can select paper vertices
+            while (camColorTrackerSym.verticesLearned < 4) { // display the video so the user can select paper vertices
                 capture.read(currBGRFrame);
                 Core.flip(currBGRFrame, currBGRFrame, 1);
 
                 // update GUI
                 currBuffImg = matToBufferedImage(currBGRFrame);
-                camPanelColorBased.setimage(currBuffImg);
-                camPanelColorBased.repaint();
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
             }
 
             // four vertices obtained
@@ -200,15 +200,15 @@ public class PanelColorBased extends JPanel
 
             // connect vertices
             Scalar white8UC1 = new Scalar(255);
-            Core.line(paperMask, camPanelColorBased.vertices[0], camPanelColorBased.vertices[1], white8UC1);
-            Core.line(paperMask, camPanelColorBased.vertices[1], camPanelColorBased.vertices[2], white8UC1);
-            Core.line(paperMask, camPanelColorBased.vertices[2], camPanelColorBased.vertices[3], white8UC1);
-            Core.line(paperMask, camPanelColorBased.vertices[0], camPanelColorBased.vertices[3], white8UC1);
+            Core.line(paperMask, camColorTrackerSym.vertices[0], camColorTrackerSym.vertices[1], white8UC1);
+            Core.line(paperMask, camColorTrackerSym.vertices[1], camColorTrackerSym.vertices[2], white8UC1);
+            Core.line(paperMask, camColorTrackerSym.vertices[2], camColorTrackerSym.vertices[3], white8UC1);
+            Core.line(paperMask, camColorTrackerSym.vertices[0], camColorTrackerSym.vertices[3], white8UC1);
 
             // update GUI
             currBuffImg = matToBufferedImage(paperMask);
-            binaryPanelColorBased.setimage(currBuffImg);
-            binaryPanelColorBased.repaint();
+            binaryColorTrackerSym.setimage(currBuffImg);
+            binaryColorTrackerSym.repaint();
 
             Thread.sleep(500); // optional
 
@@ -222,8 +222,8 @@ public class PanelColorBased extends JPanel
 
             // update GUI
             currBuffImg = matToBufferedImage(paperMask);
-            binaryPanelColorBased.setimage(currBuffImg);
-            binaryPanelColorBased.repaint();
+            binaryColorTrackerSym.setimage(currBuffImg);
+            binaryColorTrackerSym.repaint();
 
             /** extract layout **/
 
@@ -293,8 +293,8 @@ public class PanelColorBased extends JPanel
 
                 //currBuffImg = matToBufferedImage(masked);
                 currBuffImg = matToBufferedImage(masked);
-                binaryPanelColorBased.setimage(currBuffImg);
-                binaryPanelColorBased.repaint();
+                binaryColorTrackerSym.setimage(currBuffImg);
+                binaryColorTrackerSym.repaint();
 
                 // update GUI, draw filtered contours on it
                 for (MatOfPoint contour : contours)
@@ -310,15 +310,15 @@ public class PanelColorBased extends JPanel
                         contourColorGray.val[0] = 50.0;
                 } // C:50 D:70 E:90 F:110 G:130 A:150 B:170 C:190
                 currBuffImg = matToBufferedImage(filteredContoursDisplay);
-                camPanelColorBased.setimage(currBuffImg);
-                camPanelColorBased.repaint();
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
             }
 
             /**************************************************************************************************
              * Now, done learning layout **********************************************************************
              **************************************************************************************************/
 
-            double[][] lowHigh1 = (double[][]) FileIO.deserialize("high_orange");
+            double[][] lowHigh1 = (double[][]) FileIO.deserialize("lof_orange");
             double[][] lowHigh2 = (double[][]) FileIO.deserialize("lof_red"); // enables snd mallet
 //            double[][] lowHigh2 = null;
             Scalar low1 = new Scalar(lowHigh1[0]);
@@ -345,6 +345,7 @@ public class PanelColorBased extends JPanel
 
             double direction1 = 0; // direction the mallet moves
             double direction2 = 0;
+            int numOfUps1 = 0;
             int numOfUps2 = 0;
             Point hitIndicator = new Point(20, 20);
             final int ZERO_VAL = 5;
@@ -414,24 +415,29 @@ public class PanelColorBased extends JPanel
                 if (currCentroid1.y - lastCentroid1.y > 0) { // keeps going down
                     zeroCounter1 = ZERO_VAL;
                     direction1 = currCentroid1.y - lastCentroid1.y;
-                } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0) { // switching direction to up
+                    numOfUps1++;
+                } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0 && numOfUps1 > 1) { // switching direction to up
                     midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
                     if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
                         Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                     direction1 = currCentroid1.y - lastCentroid1.y;
                     zeroCounter1 = ZERO_VAL;
+                    numOfUps1 = 0;
                     // highlight on hitting note
                     keyColorVal1 = (int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0];
-                    for (row = 0; row < R; row++)
-                        for (col = 0; col < C; col++) {
-                            if (currHSVFrame.get(row, col)[0] == keyColorVal1)
-                                currHSVFrame.put(row, col, RBGWhite);
-                        }
+                    if (keyColorVal1 != 0) {
+                        for (row = 0; row < R; row++)
+                            for (col = 0; col < C; col++) {
+                                if (currHSVFrame.get(row, col)[0] == keyColorVal1)
+                                    currHSVFrame.put(row, col, RBGWhite);
+                            }
+                    }
                 } else if (currCentroid1.y - lastCentroid1.y == 0) {
                     if (zeroCounter1 != 0) { // if next time it goes up, there is still chance to sound
                         zeroCounter1--;
                     } else {
                         direction1 = 0;
+                        numOfUps1 = 0;
                     }
                 }
 
@@ -450,11 +456,13 @@ public class PanelColorBased extends JPanel
                         numOfUps2 = 0;
                         // highlight on hitting note
                         keyColorVal2 = (int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0];
-                        for (row = 0; row < R; row++)
-                            for (col = 0; col < C; col++) {
-                                if (currHSVFrame.get(row, col)[0] == keyColorVal2)
-                                    currHSVFrame.put(row, col, RBGWhite);
-                            }
+                        if (keyColorVal2 != 0) {
+                            for (row = 0; row < R; row++)
+                                for (col = 0; col < C; col++) {
+                                    if (currHSVFrame.get(row, col)[0] == keyColorVal2)
+                                        currHSVFrame.put(row, col, RBGWhite);
+                                }
+                        }
                     } else if (currCentroid2.y - lastCentroid2.y == 0) {
                         if (zeroCounter2 != 0) { // if next time it goes up, there is still chance to sound
                             zeroCounter2--;
@@ -464,17 +472,17 @@ public class PanelColorBased extends JPanel
                         }
                     }
                 }
-                System.out.println(direction2);
+//                System.out.println(direction2);
 
                 /** update left canvas **/
                 currBuffImg = matToBufferedImage(currBGRFrame);
-                camPanelColorBased.setimage(currBuffImg);
-                camPanelColorBased.repaint();
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
 
                 /** update right canvas **/
                 currBuffImg = matToBufferedImage(currHSVFrame);
-                binaryPanelColorBased.setimage(currBuffImg);
-                binaryPanelColorBased.repaint();
+                binaryColorTrackerSym.setimage(currBuffImg);
+                binaryColorTrackerSym.repaint();
 
                 /** update last centroid **/
                 lastCentroid1.x = currCentroid1.x;
