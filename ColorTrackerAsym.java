@@ -346,8 +346,6 @@ public class ColorTrackerAsym extends JPanel
 
             double direction1 = 0; // direction the mallet moves
             double direction2 = 0;
-            int numOfUps1 = 0;
-            int numOfUps2 = 0;
             Point hitIndicator = new Point(20, 20);
             final int ZERO_VAL = 5;
             int zeroCounter1 = ZERO_VAL, zeroCounter2 = ZERO_VAL;
@@ -412,18 +410,16 @@ public class ColorTrackerAsym extends JPanel
                 if (lowHigh2 != null)
                     Core.circle(currHSVFrame, currCentroid2, 5, blue, -1);
 
-                /** hit detection **/
-                if (currCentroid1.y - lastCentroid1.y > 0) { // keeps going down
+                /** hit detection **/ // going right: curr - last > 0, going left: curr - last < 0
+                if (currCentroid1.x - lastCentroid1.x < 0) { // keeps going left
                     zeroCounter1 = ZERO_VAL;
-                    direction1 = currCentroid1.y - lastCentroid1.y;
-                    numOfUps1++;
-                } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0 && numOfUps1 > 1) { // switching direction to up
+                    direction1 = currCentroid1.x - lastCentroid1.x;
+                } else if (currCentroid1.x - lastCentroid1.x >= 0 && direction1 < 0) { // switching direction to right
                     midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
                     if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
                         Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
-                    direction1 = currCentroid1.y - lastCentroid1.y;
+                    direction1 = currCentroid1.x - lastCentroid1.x;
                     zeroCounter1 = ZERO_VAL;
-                    numOfUps1 = 0;
                     // highlight on hitting note
                     keyColorVal1 = (int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0];
                     if (keyColorVal1 != 0) {
@@ -433,28 +429,24 @@ public class ColorTrackerAsym extends JPanel
                                     currHSVFrame.put(row, col, RBGWhite);
                             }
                     }
-                } else if (currCentroid1.y - lastCentroid1.y == 0) {
+                } else if (currCentroid1.x - lastCentroid1.x == 0) {
                     if (zeroCounter1 != 0) { // if next time it goes up, there is still chance to sound
                         zeroCounter1--;
                     } else {
                         direction1 = 0;
-                        numOfUps1 = 0;
                     }
                 }
 
                 if (lowHigh2 != null) {
-                    if (currCentroid2.y - lastCentroid2.y > 0) { // keeps going down
+                    if (currCentroid2.x - lastCentroid2.x < 0) { // keeps going left
                         zeroCounter2 = ZERO_VAL;
-                        direction2 = currCentroid2.y - lastCentroid2.y;
-                        numOfUps2++;
-                    } else if (currCentroid2.y - lastCentroid2.y <= 0 && direction2 > 0 && numOfUps2 > 1) { // switching direction to up
+                        direction2 = currCentroid2.x - lastCentroid2.x;
+                    } else if (currCentroid2.x - lastCentroid2.x >= 0 && direction2 < 0) { // switching direction to right
                         midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
-                        System.out.println("hit");
                         if (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x)[0] == 0)
                             Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
-                        direction2 = currCentroid2.y - lastCentroid2.y;
+                        direction2 = currCentroid2.x - lastCentroid2.x;
                         zeroCounter2 = ZERO_VAL;
-                        numOfUps2 = 0;
                         // highlight on hitting note
                         keyColorVal2 = (int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0];
                         if (keyColorVal2 != 0) {
@@ -464,12 +456,11 @@ public class ColorTrackerAsym extends JPanel
                                         currHSVFrame.put(row, col, RBGWhite);
                                 }
                         }
-                    } else if (currCentroid2.y - lastCentroid2.y == 0) {
+                    } else if (currCentroid2.x - lastCentroid2.x == 0) {
                         if (zeroCounter2 != 0) { // if next time it goes up, there is still chance to sound
                             zeroCounter2--;
                         } else {
                             direction2 = 0;
-                            numOfUps2 = 0;
                         }
                     }
                 }
