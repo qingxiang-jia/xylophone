@@ -137,6 +137,10 @@ public class ColorTrackerSym extends JPanel
         boolean isDrum = false;
         midi.run(); // start a new thread
 
+        /** set up JFugue **/
+        DrumKit drumKit = new DrumKit();
+        drumKit.run();
+
         /** define note **/
         final int C3 = 50, D3 = 60, E3 = 70, F3 = 80, G3 = 90, A4 = 100, B4 = 110, C4 = 120; // basic layout
         final int D4 = 130, E4 = 140, F4 = 150, G4 = 160, A5 = 170; // extended layout
@@ -157,12 +161,12 @@ public class ColorTrackerSym extends JPanel
 
         // for drum set
         int colorToNoteDrum[] = new int[101];
-        colorToNoteDrum[C3] = Instruments.REVERSE_CYMBAL;
-        colorToNoteDrum[D3] = Instruments.SLAP_BASS_1;
-        colorToNoteDrum[E3] = Instruments.MELODIC_TOM;
-        colorToNoteDrum[F3] = Instruments.MELODIC_TOM;
-        colorToNoteDrum[G3] = Instruments.TRUMPET;
-        colorToNoteDrum[A4] = Instruments.REVERSE_CYMBAL;
+        colorToNoteDrum[C3] = 51;
+        colorToNoteDrum[D3] = 35;
+        colorToNoteDrum[E3] = 44;
+        colorToNoteDrum[F3] = 45;
+        colorToNoteDrum[G3] = 41;
+        colorToNoteDrum[A4] = 51;
 
         /** img processing **/
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -469,10 +473,10 @@ public class ColorTrackerSym extends JPanel
                     }
                 }
 
-                // temp todo
-                currBuffImg = matToBufferedImage(frame2);
-                camColorTrackerSym.setimage(currBuffImg);
-                camColorTrackerSym.repaint();
+                // display on left screen
+//                currBuffImg = matToBufferedImage(frame2);
+//                camColorTrackerSym.setimage(currBuffImg);
+//                camColorTrackerSym.repaint();
 
                 /** show centroid **/
                 filteredContoursDisplay.copyTo(currHSVFrame);
@@ -525,7 +529,11 @@ public class ColorTrackerSym extends JPanel
                         direction2 = currCentroid2.y - lastCentroid2.y;
 //                        numOfUps2++;
                     } else if (currCentroid2.y - lastCentroid2.y <= 0 && direction2 > 0) { // switching direction to up
-                        midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
+                        if (layoutList.getSelectedIndex() != 2) {
+                            midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
+                        } else {
+                            midi.soundDrumKit(colorToNoteDrum[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
+                        }
                         if (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x)[0] == 0)
                             Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                         direction2 = currCentroid2.y - lastCentroid2.y;
@@ -552,9 +560,9 @@ public class ColorTrackerSym extends JPanel
 //                System.out.println(direction2);
 
                 /** update left canvas **/
-//                currBuffImg = matToBufferedImage(currBGRFrame);
-//                camColorTrackerSym.setimage(currBuffImg);
-//                camColorTrackerSym.repaint();
+                currBuffImg = matToBufferedImage(currBGRFrame);
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
 
                 /** update right canvas **/
                 currBuffImg = matToBufferedImage(currHSVFrame);

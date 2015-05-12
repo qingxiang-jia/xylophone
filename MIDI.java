@@ -59,7 +59,17 @@ public class MIDI implements Runnable
 
     public void soundDrumKit(int instrument) throws Exception
     {
-        channel[10].programChange(instrument);
-        channel[10].noteOn(100, 150);
+        channel[9].noteOn(instrument, 150);
+    }
+
+    public static void main(String[] args) throws Exception
+    {
+        MIDI midi = new MIDI();
+        for (int i =30; i < 128; i++)
+        {
+            midi.soundDrumKit(i);
+            System.out.println(i);
+            Thread.sleep(800);
+        }
     }
 }
