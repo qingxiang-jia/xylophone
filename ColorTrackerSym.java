@@ -16,7 +16,7 @@ public class ColorTrackerSym extends JPanel
 {
     public Point mouseUL;
     public Point mouseLR;
-    public final int selectBoxLen = 10;
+    public final int selectBoxLen = 2;
     public boolean selecting = true;
 
     private static final long serialVersionUID = 1L;
@@ -124,7 +124,7 @@ public class ColorTrackerSym extends JPanel
         ConditionButton confirmSlider = new ConditionButton();
         confirmSlider.setText("Looks Good");
         options.add(confirmSlider);
-        String[] layoutLst = new String[]{"Xylophone Standard", "Xylophone Extended"};
+        String[] layoutLst = new String[]{"Xylophone Standard", "Xylophone Extended", "Drum Set"};
         JComboBox layoutList = new JComboBox<>(layoutLst);
         layoutList.setSelectedIndex(0);
         options.add(layoutList);
@@ -134,6 +134,7 @@ public class ColorTrackerSym extends JPanel
 
         /** set up MIDI **/
         MIDI midi = new MIDI();
+        boolean isDrum = false;
         midi.run(); // start a new thread
 
         /** define note **/
@@ -153,6 +154,15 @@ public class ColorTrackerSym extends JPanel
         colorToNote[F4] = 77;
         colorToNote[G4] = 79;
         colorToNote[A5] = 81;
+
+        // for drum set
+        int colorToNoteDrum[] = new int[101];
+        colorToNoteDrum[C3] = Instruments.REVERSE_CYMBAL;
+        colorToNoteDrum[D3] = Instruments.SLAP_BASS_1;
+        colorToNoteDrum[E3] = Instruments.MELODIC_TOM;
+        colorToNoteDrum[F3] = Instruments.MELODIC_TOM;
+        colorToNoteDrum[G3] = Instruments.TRUMPET;
+        colorToNoteDrum[A4] = Instruments.REVERSE_CYMBAL;
 
         /** img processing **/
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -318,8 +328,8 @@ public class ColorTrackerSym extends JPanel
              * Now, done learning layout **********************************************************************
              **************************************************************************************************/
 
-            double[][] lowHigh1 = (double[][]) FileIO.deserialize("lof_orange");
-            double[][] lowHigh2 = (double[][]) FileIO.deserialize("lof_red"); // enables snd mallet
+            double[][] lowHigh1 = (double[][]) FileIO.deserialize("orange_vic2");
+            double[][] lowHigh2 = (double[][]) FileIO.deserialize("red_vic2"); // enables snd mallet
 //            double[][] lowHigh2 = null;
             Scalar low1 = new Scalar(lowHigh1[0]);
             Scalar high1 = new Scalar(lowHigh1[1]);
@@ -355,7 +365,25 @@ public class ColorTrackerSym extends JPanel
             int R = (int) filteredContoursDisplay.size().height, C = (int) filteredContoursDisplay.size().width;
             double[] RBGWhite = new double[]{255.0, 255.0, 255.0};
 
+            Mat hierarchy1 = new Mat();
+            Mat hierarchy2 = new Mat();
+            ArrayList<MatOfPoint> contours1 = new ArrayList<>();
+            ArrayList<MatOfPoint> contours2 = new ArrayList<>();
+            MatOfPoint candidate1 = null;
+            MatOfPoint candidate2 = null;
+            ArrayList<MatOfPoint> dummyArr1 = new ArrayList<>(1);
+            ArrayList<MatOfPoint> dummyArr2 = new ArrayList<>(1);
+            double contourArea = 0;
+
+            boolean mallet1Gone = true;
+            boolean mallet2Gone = true;
+
             while (true) {
+                contours1.clear();
+                contours2.clear();
+                dummyArr1.clear();
+                dummyArr2.clear();
+
                 capture.read(currBGRFrame);
                 Core.flip(currBGRFrame, currBGRFrame, 1);
                 Imgproc.cvtColor(currBGRFrame, currHSVFrame, Imgproc.COLOR_BGR2HSV);
@@ -372,15 +400,52 @@ public class ColorTrackerSym extends JPanel
                 Imgproc.erode(frame1, frame1, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
                 Imgproc.dilate(frame1, frame1, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
 
+                // find and keep biggest contour
+                Imgproc.findContours(frame1, contours1, hierarchy1, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                for (MatOfPoint contour : contours1) {
+                    if (Imgproc.contourArea(contour) > contourArea) {
+                        candidate1 = contour;
+                        contourArea = Imgproc.contourArea(contour);
+                    }
+                }
+                if (candidate1 != null && contourArea > 10) {
+                    dummyArr1.add(candidate1);
+                    frame1 = Mat.zeros(frame1.size(), frame1.type());
+                    Imgproc.drawContours(frame1, dummyArr1, 0, white8UC1, -1);
+                    mallet1Gone = false;
+                } else {
+                    mallet1Gone = true;
+                }
+                contourArea = 0;
+
+
                 if (lowHigh2 != null) {
                     Imgproc.erode(frame2, frame2, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
                     Imgproc.dilate(frame2, frame2, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, dilateSize));
+
+                    Imgproc.findContours(frame2, contours2, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+                    for (MatOfPoint contour : contours2) {
+                        if (Imgproc.contourArea(contour) > contourArea) {
+                            candidate2 = contour;
+                            contourArea = Imgproc.contourArea(contour);
+                        }
+                    }
+                    if (candidate2 != null && contourArea > 10) {
+                        dummyArr2.add(candidate2);
+                        frame2 = Mat.zeros(frame2.size(), frame2.type());
+                        Imgproc.drawContours(frame2, dummyArr2, 0, white8UC1, -1);
+                        mallet2Gone = false;
+                    } else {
+                        mallet2Gone = true;
+                    }
+                    contourArea = 0;
                 }
 
                 /** compute centroid **/
                 Moments moments1 = Imgproc.moments(frame1);
                 currCentroid1.x = moments1.get_m10() / moments1.get_m00();
                 currCentroid1.y = moments1.get_m01() / moments1.get_m00();
+
 
                 if (lowHigh2 != null) {
                     Moments moments2 = Imgproc.moments(frame2);
@@ -404,56 +469,68 @@ public class ColorTrackerSym extends JPanel
                     }
                 }
 
+                // temp todo
+                currBuffImg = matToBufferedImage(frame2);
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
+
                 /** show centroid **/
                 filteredContoursDisplay.copyTo(currHSVFrame);
                 Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
-                Core.circle(currHSVFrame, currCentroid1, 5, green, -1);
-                if (lowHigh2 != null)
+                if (!mallet1Gone)
+                    Core.circle(currHSVFrame, currCentroid1, 5, green, -1);
+                if (lowHigh2 != null && !mallet2Gone)
                     Core.circle(currHSVFrame, currCentroid2, 5, blue, -1);
 
                 /** hit detection **/
-                if (currCentroid1.y - lastCentroid1.y > 0) { // keeps going down
-                    zeroCounter1 = ZERO_VAL;
-                    direction1 = currCentroid1.y - lastCentroid1.y;
-                    numOfUps1++;
-                } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0 && numOfUps1 > 1) { // switching direction to up
-                    midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
-                    if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
-                        Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
-                    direction1 = currCentroid1.y - lastCentroid1.y;
-                    zeroCounter1 = ZERO_VAL;
-                    numOfUps1 = 0;
-                    // highlight on hitting note
-                    keyColorVal1 = (int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0];
-                    if (keyColorVal1 != 0) {
-                        for (row = 0; row < R; row++)
-                            for (col = 0; col < C; col++) {
-                                if (currHSVFrame.get(row, col)[0] == keyColorVal1)
-                                    currHSVFrame.put(row, col, RBGWhite);
-                            }
-                    }
-                } else if (currCentroid1.y - lastCentroid1.y == 0) {
-                    if (zeroCounter1 != 0) { // if next time it goes up, there is still chance to sound
-                        zeroCounter1--;
-                    } else {
-                        direction1 = 0;
-                        numOfUps1 = 0;
+                if (!mallet1Gone)
+                {
+                    if (currCentroid1.y - lastCentroid1.y > 0) { // keeps going down
+                        zeroCounter1 = ZERO_VAL;
+                        direction1 = currCentroid1.y - lastCentroid1.y;
+//                    numOfUps1++;
+                    } else if (currCentroid1.y - lastCentroid1.y <= 0 && direction1 > 0) { // switching direction to up
+                        if (layoutList.getSelectedIndex() != 2) {
+                            midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
+                        } else {
+                            midi.soundDrumKit(colorToNoteDrum[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
+                        }
+                        if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
+                            Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
+                        direction1 = currCentroid1.y - lastCentroid1.y;
+                        zeroCounter1 = ZERO_VAL;
+//                    numOfUps1 = 0;
+                        // highlight on hitting note
+                        keyColorVal1 = (int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0];
+                        if (keyColorVal1 != 0) {
+                            for (row = 0; row < R; row++)
+                                for (col = 0; col < C; col++) {
+                                    if (currHSVFrame.get(row, col)[0] == keyColorVal1)
+                                        currHSVFrame.put(row, col, RBGWhite);
+                                }
+                        }
+                    } else if (currCentroid1.y - lastCentroid1.y == 0) {
+                        if (zeroCounter1 != 0) { // if next time it goes up, there is still chance to sound
+                            zeroCounter1--;
+                        } else {
+                            direction1 = 0;
+//                        numOfUps1 = 0;
+                        }
                     }
                 }
 
-                if (lowHigh2 != null) {
+                if (lowHigh2 != null && !mallet2Gone) {
                     if (currCentroid2.y - lastCentroid2.y > 0) { // keeps going down
                         zeroCounter2 = ZERO_VAL;
                         direction2 = currCentroid2.y - lastCentroid2.y;
-                        numOfUps2++;
-                    } else if (currCentroid2.y - lastCentroid2.y <= 0 && direction2 > 0 && numOfUps2 > 1) { // switching direction to up
+//                        numOfUps2++;
+                    } else if (currCentroid2.y - lastCentroid2.y <= 0 && direction2 > 0) { // switching direction to up
                         midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0]]);
-                        System.out.println("hit");
                         if (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x)[0] == 0)
                             Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                         direction2 = currCentroid2.y - lastCentroid2.y;
                         zeroCounter2 = ZERO_VAL;
-                        numOfUps2 = 0;
+//                        numOfUps2 = 0;
                         // highlight on hitting note
                         keyColorVal2 = (int) (filteredContoursDisplay.get((int) currCentroid2.y, (int) currCentroid2.x))[0];
                         if (keyColorVal2 != 0) {
@@ -468,16 +545,16 @@ public class ColorTrackerSym extends JPanel
                             zeroCounter2--;
                         } else {
                             direction2 = 0;
-                            numOfUps2 = 0;
+//                            numOfUps2 = 0;
                         }
                     }
                 }
 //                System.out.println(direction2);
 
                 /** update left canvas **/
-                currBuffImg = matToBufferedImage(currBGRFrame);
-                camColorTrackerSym.setimage(currBuffImg);
-                camColorTrackerSym.repaint();
+//                currBuffImg = matToBufferedImage(currBGRFrame);
+//                camColorTrackerSym.setimage(currBuffImg);
+//                camColorTrackerSym.repaint();
 
                 /** update right canvas **/
                 currBuffImg = matToBufferedImage(currHSVFrame);

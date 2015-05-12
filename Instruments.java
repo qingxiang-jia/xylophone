@@ -38,11 +38,11 @@ public class Instruments
     public static final int ACOUSTIC_BASS = 32;
     public static final int ELECTRIC_BASS__FINGE = 33;
     public static final int ELECTRIC_BASS__PICK_ = 34;
-    public static final int FRETLESS_BASS = 35;
-    public static final int SLAP_BASS_1 = 36;
-    public static final int SLAP_BASS_2 = 37;
-    public static final int SYNTH_BASS_1 = 38;
-    public static final int SYNTH_BASS_2 = 39;
+    public static final int FRETLESS_BASS = 35; // DNE
+    public static final int SLAP_BASS_1 = 36; // DNE
+    public static final int SLAP_BASS_2 = 37; // DNE
+    public static final int SYNTH_BASS_1 = 38; // DNE
+    public static final int SYNTH_BASS_2 = 39; // DNE
     public static final int VIOLIN = 40;
     public static final int VIOLA = 41;
     public static final int CELLO = 42;

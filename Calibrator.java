@@ -175,8 +175,10 @@ public class Calibrator
                 Thread.sleep(1000);
 
                 /** compute roi HSV ranges **/
-                roi = currBGRFrame.submat((int) leftPanel.mouseUL.y + 2, (int) leftPanel.mouseLR.y - 2,
-                        (int) leftPanel.mouseUL.x + 2, (int) leftPanel.mouseLR.x - 2);
+//                roi = currBGRFrame.submat((int) leftPanel.mouseUL.y + 2, (int) leftPanel.mouseLR.y - 2,
+//                        (int) leftPanel.mouseUL.x + 2, (int) leftPanel.mouseLR.x - 2);
+                roi = currBGRFrame.submat((int) leftPanel.mouseUL.y, (int) leftPanel.mouseLR.y,
+                        (int) leftPanel.mouseUL.x, (int) leftPanel.mouseLR.x);
                 Imgproc.cvtColor(roi, roi, Imgproc.COLOR_BGR2HSV);
 
                 MatOfDouble mean = new MatOfDouble(); // h s v

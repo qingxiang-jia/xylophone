@@ -24,6 +24,9 @@ public class MIDI implements Runnable
             return ;
         }
         channel = synth.getChannels();
+        System.out.println(synth.getDefaultSoundbank().getVendor());
+        System.out.println(synth.getDefaultSoundbank().getDescription());
+        System.out.println(synth.getDefaultSoundbank().getVersion());
         instruments = synth.getDefaultSoundbank().getInstruments();
         setInstrument(Instruments.XYLOPHONE); // default is xylophone
     }
@@ -52,5 +55,11 @@ public class MIDI implements Runnable
     public void sound(int note) throws Exception
     {
         channel[0].noteOn(note, 150);
+    }
+
+    public void soundDrumKit(int instrument) throws Exception
+    {
+        channel[10].programChange(instrument);
+        channel[10].noteOn(100, 150);
     }
 }
