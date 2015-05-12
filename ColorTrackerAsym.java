@@ -353,6 +353,7 @@ public class ColorTrackerAsym extends JPanel
             int row = 0, col = 0;
             int R = (int) filteredContoursDisplay.size().height, C = (int) filteredContoursDisplay.size().width;
             double[] RBGWhite = new double[]{255.0, 255.0, 255.0};
+            int frame1White = 0;
 
             while (true) {
                 capture.read(currBGRFrame);
@@ -366,6 +367,16 @@ public class ColorTrackerAsym extends JPanel
                 Core.inRange(frame1, low1, high1, frame1);
                 if (lowHigh2 != null)
                     Core.inRange(frame2, low2, high2, frame2);
+
+                // count white area
+                frame1White = 0;
+                for (row = 0; row < R; row++)
+                    for (col = 0; col < C; col++) {
+                        if (frame1.get(row, col)[0] != 0)
+                            frame1White++;
+                    }
+
+                System.out.println(frame1White);
 
                 /** remove noise **/
                 Imgproc.erode(frame1, frame1, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, erodeSize));
@@ -404,6 +415,11 @@ public class ColorTrackerAsym extends JPanel
                 }
 
                 /** show centroid **/
+                Core.circle(frame1, currCentroid1, 5, green, -1);
+                currBuffImg = matToBufferedImage(frame1);
+                camColorTrackerSym.setimage(currBuffImg);
+                camColorTrackerSym.repaint();
+
                 filteredContoursDisplay.copyTo(currHSVFrame);
                 Imgproc.cvtColor(currHSVFrame, currHSVFrame, Imgproc.COLOR_GRAY2BGR);
                 Core.circle(currHSVFrame, currCentroid1, 5, green, -1);
@@ -414,8 +430,9 @@ public class ColorTrackerAsym extends JPanel
                 if (currCentroid1.x - lastCentroid1.x < 0) { // keeps going left
                     zeroCounter1 = ZERO_VAL;
                     direction1 = currCentroid1.x - lastCentroid1.x;
-                } else if (currCentroid1.x - lastCentroid1.x >= 0 && direction1 < 0) { // switching direction to right
+                } else if (currCentroid1.x - lastCentroid1.x >= 0 && direction1 < 0 && frame1White > 150) { // switching direction to right
                     midi.sound(colorToNote[(int) (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x))[0]]);
+                    System.out.println("hit");
                     if (filteredContoursDisplay.get((int) currCentroid1.y, (int) currCentroid1.x)[0] == 0)
                         Core.circle(currHSVFrame, hitIndicator, 10, red, -1);
                     direction1 = currCentroid1.x - lastCentroid1.x;
@@ -436,6 +453,8 @@ public class ColorTrackerAsym extends JPanel
                         direction1 = 0;
                     }
                 }
+
+//                System.out.println(direction1);
 
                 if (lowHigh2 != null) {
                     if (currCentroid2.x - lastCentroid2.x < 0) { // keeps going left
@@ -467,9 +486,9 @@ public class ColorTrackerAsym extends JPanel
 //                System.out.println(direction2);
 
                 /** update left canvas **/
-                currBuffImg = matToBufferedImage(currBGRFrame);
-                camColorTrackerSym.setimage(currBuffImg);
-                camColorTrackerSym.repaint();
+//                currBuffImg = matToBufferedImage(currBGRFrame);
+//                camColorTrackerSym.setimage(currBuffImg);
+//                camColorTrackerSym.repaint();
 
                 /** update right canvas **/
                 currBuffImg = matToBufferedImage(currHSVFrame);
